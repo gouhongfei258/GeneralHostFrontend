@@ -1,0 +1,126 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:GeneralHostFrontend.ViewModels.Tags"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="980" d:DesignHeight="640"
+        Width="980"
+        Height="640"
+        MinWidth="840"
+        MinHeight="560"
+        x:Class="GeneralHostFrontend.Views.Tags.TagEditorWindow"
+        x:DataType="vm:TagEditorViewModel"
+        Title="Tag Manager">
+
+    <Design.DataContext>
+        <vm:TagEditorViewModel/>
+    </Design.DataContext>
+
+    <Grid RowDefinitions="Auto,*,Auto" Background="#F4F6F8">
+        <Border Grid.Row="0" Background="#18202A" Padding="16,10">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
+                <StackPanel>
+                    <TextBlock Text="Tag Manager" Foreground="White" FontSize="18" FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding StatusMessage}" Foreground="#B9C3CF" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+                <Button Grid.Column="1" Command="{Binding ReloadCommand}" Content="Reload" MinWidth="78"/>
+                <Button Grid.Column="2" Command="{Binding SaveCommand}" Content="Save Changes" MinWidth="118"/>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1" ColumnDefinitions="320,*" ColumnSpacing="12" Margin="12">
+            <Border Grid.Column="0" Background="White" BorderBrush="#DAE0E6" BorderThickness="1" CornerRadius="8" Padding="12">
+                <Grid RowDefinitions="Auto,Auto,*" RowSpacing="8">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <TextBlock Text="Tags" FontSize="15" FontWeight="SemiBold" Foreground="#1D2733" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="1" Text="{Binding Tags.Count}" Foreground="#6B7785" VerticalAlignment="Center"/>
+                    </Grid>
+
+                    <Grid Grid.Row="1" ColumnDefinitions="*,*" ColumnSpacing="8">
+                        <Button Grid.Column="0"
+                                Command="{Binding AddCommand}"
+                                Content="Add Tag"
+                                MinHeight="38"
+                                Background="#0B6B5B"
+                                Foreground="White"
+                                FontWeight="SemiBold"/>
+                        <Button Grid.Column="1"
+                                Command="{Binding DeleteCommand}"
+                                Content="Delete Selected"
+                                MinHeight="38"
+                                Background="#8A2D3B"
+                                Foreground="White"
+                                FontWeight="SemiBold"/>
+                    </Grid>
+
+                    <ListBox Grid.Row="2"
+                             ItemsSource="{Binding Tags}"
+                             SelectedItem="{Binding SelectedTag}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid ColumnDefinitions="*,Auto" Margin="0,5" ColumnSpacing="8">
+                                    <Grid RowDefinitions="Auto,Auto">
+                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="#243142" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Grid.Row="1" Text="{Binding Address}" Foreground="#6B7785" FontSize="11"/>
+                                    </Grid>
+                                    <Button Grid.Column="1"
+                                            Command="{Binding $parent[Window].DataContext.DeleteTagCommand}"
+                                            CommandParameter="{Binding}"
+                                            Content="Delete"
+                                            MinWidth="68"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="1" Background="White" BorderBrush="#DAE0E6" BorderThickness="1" CornerRadius="8" Padding="14">
+                <ScrollViewer>
+                    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="160,*" RowSpacing="12" ColumnSpacing="12"
+                          DataContext="{Binding SelectedTag}">
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Name" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Name}"/>
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Device" VerticalAlignment="Center"/>
+                        <ComboBox Grid.Row="1" Grid.Column="1"
+                                  ItemsSource="{Binding $parent[Window].DataContext.DeviceIds}"
+                                  SelectedItem="{Binding DeviceId}"/>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Address" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Address}"/>
+
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Data Type" VerticalAlignment="Center"/>
+                        <ComboBox Grid.Row="3" Grid.Column="1"
+                                  ItemsSource="{Binding $parent[Window].DataContext.DataTypes}"
+                                  SelectedItem="{Binding DataType}"/>
+
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Access" VerticalAlignment="Center"/>
+                        <ComboBox Grid.Row="4" Grid.Column="1"
+                                  ItemsSource="{Binding $parent[Window].DataContext.AccessModes}"
+                                  SelectedItem="{Binding Access}"/>
+
+                        <Grid Grid.Row="5" Grid.ColumnSpan="2" ColumnDefinitions="160,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="12" ColumnSpacing="12">
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Scan Period (ms)" VerticalAlignment="Center"/>
+                            <NumericUpDown Grid.Row="0" Grid.Column="1" Minimum="20" Maximum="600000" Increment="10" Value="{Binding ScanPeriodMs}"/>
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Engineering Unit" VerticalAlignment="Center"/>
+                            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding EngineeringUnit}"/>
+
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Lower Limit" VerticalAlignment="Center"/>
+                            <NumericUpDown Grid.Row="2" Grid.Column="1" Minimum="-100000000" Maximum="100000000" Value="{Binding LowerLimit}"/>
+
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="Upper Limit" VerticalAlignment="Center"/>
+                            <NumericUpDown Grid.Row="3" Grid.Column="1" Minimum="-100000000" Maximum="100000000" Value="{Binding UpperLimit}"/>
+                        </Grid>
+                    </Grid>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+
+        <Border Grid.Row="2" Background="#EEF3F7" Padding="12,8">
+            <TextBlock Text="Add/Delete/Edit changes are staged in this window. Click Save Changes to write Config/hostsettings.json. Restart acquisition to apply runtime scan changes."
+                       Foreground="#516071"/>
+        </Border>
+    </Grid>
+</Window>

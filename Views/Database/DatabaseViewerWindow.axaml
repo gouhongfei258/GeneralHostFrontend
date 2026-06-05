@@ -1,0 +1,105 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:GeneralHostFrontend.ViewModels.Database"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1080" d:DesignHeight="700"
+        Width="1080"
+        Height="700"
+        MinWidth="860"
+        MinHeight="560"
+        x:Class="GeneralHostFrontend.Views.Database.DatabaseViewerWindow"
+        x:DataType="vm:DatabaseViewerViewModel"
+        Title="Embedded Database Viewer">
+
+    <Design.DataContext>
+        <vm:DatabaseViewerViewModel/>
+    </Design.DataContext>
+
+    <Grid RowDefinitions="Auto,*" Background="#F4F6F8">
+        <Border Grid.Row="0" Background="#18202A" Padding="16,10">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8">
+                <StackPanel>
+                    <TextBlock Text="Embedded Database Viewer" Foreground="White" FontSize="18" FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding DatabaseFile}" Foreground="#B9C3CF" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+                <TextBlock Grid.Column="1" Text="{Binding DatabaseStatus}" Foreground="#DDE6EE" VerticalAlignment="Center"/>
+                <TextBox Grid.Column="2" Width="220" PlaceholderText="Filter current table" Text="{Binding Keyword}"/>
+                <Button Grid.Column="3" Command="{Binding RefreshCommand}" Content="Refresh" MinWidth="84"/>
+                <Button Grid.Column="4" Command="{Binding ExportCsvCommand}" Content="CSV" MinWidth="64"/>
+                <TextBlock Grid.Column="5" Text="{Binding PageInfo}" Foreground="#DDE6EE" VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1" ColumnDefinitions="250,*" ColumnSpacing="12" Margin="12">
+            <Border Grid.Column="0" Background="White" BorderBrush="#DAE0E6" BorderThickness="1" CornerRadius="8" Padding="12">
+                <Grid RowDefinitions="Auto,*" RowSpacing="8">
+                    <TextBlock Text="Tables" FontSize="15" FontWeight="SemiBold" Foreground="#1D2733"/>
+                    <ListBox Grid.Row="1"
+                             ItemsSource="{Binding Tables}"
+                             SelectedItem="{Binding SelectedTable}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="0,5">
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="#243142"/>
+                                    <TextBlock Text="{Binding Summary}" Foreground="#6B7785" FontSize="11"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="1" Background="White" BorderBrush="#DAE0E6" BorderThickness="1" CornerRadius="8" Padding="12">
+                <Grid RowDefinitions="Auto,*,Auto" RowSpacing="8">
+                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                        <ItemsControl ItemsSource="{Binding Columns}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Width="170" Background="#EEF3F7" Padding="8,7" BorderBrush="#DAE0E6" BorderThickness="0,0,1,1">
+                                        <TextBlock Text="{Binding}" FontWeight="SemiBold" Foreground="#1D2733" TextTrimming="CharacterEllipsis"/>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+
+                    <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding Rows}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <ItemsControl ItemsSource="{Binding Cells}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <StackPanel Orientation="Horizontal"/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Width="170" MinHeight="28" Padding="8,5" BorderBrush="#EEF0F3" BorderThickness="0,0,1,1">
+                                                    <TextBlock Text="{Binding Value}" Foreground="#243142" TextTrimming="CharacterEllipsis"/>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+
+                    <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
+                        <TextBlock Text="{Binding LastExportPath}" Foreground="#6B7785" FontSize="11" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                        <Button Grid.Column="1" Command="{Binding PreviousPageCommand}" Content="Prev" MinWidth="76"/>
+                        <Button Grid.Column="2" Command="{Binding NextPageCommand}" Content="Next" MinWidth="76"/>
+                        <TextBlock Grid.Column="3" Text="{Binding PageInfo}" Foreground="#516071" VerticalAlignment="Center"/>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>
