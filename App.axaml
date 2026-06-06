@@ -2,8 +2,27 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="GeneralHostFrontend.App"
              xmlns:local="using:GeneralHostFrontend"
-             RequestedThemeVariant="Default">
-             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+             RequestedThemeVariant="Light">
+             <!-- Keep the app light on every platform so control colors do not follow a dark OS theme. -->
+
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceInclude Source="avares://NodifyM.Avalonia/ResourceDictionaries/Nodify.axaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <SolidColorBrush x:Key="AppTextBrush" Color="#1D2733"/>
+            <SolidColorBrush x:Key="AppMutedTextBrush" Color="#516071"/>
+            <SolidColorBrush x:Key="AppBackgroundBrush" Color="#F4F6F8"/>
+            <SolidColorBrush x:Key="AppSurfaceBrush" Color="#FFFFFF"/>
+            <SolidColorBrush x:Key="AppControlBrush" Color="#F8FAFC"/>
+            <SolidColorBrush x:Key="AppControlHoverBrush" Color="#EEF3F7"/>
+            <SolidColorBrush x:Key="AppControlPressedBrush" Color="#E2EAF2"/>
+            <SolidColorBrush x:Key="AppBorderBrush" Color="#DAE0E6"/>
+            <SolidColorBrush x:Key="AppBorderStrongBrush" Color="#B9C3CF"/>
+            <SolidColorBrush x:Key="AppSelectionBrush" Color="#DDE8F1"/>
+        </ResourceDictionary>
+    </Application.Resources>
 
     <Application.DataTemplates>
         <local:ViewLocator/>
@@ -11,5 +30,119 @@
   
     <Application.Styles>
         <FluentTheme />
+        <StyleInclude Source="avares://NodifyM.Avalonia/Styles/ControlStyles.axaml"/>
+
+        <Style Selector="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource AppTextBrush}"/>
+        </Style>
+
+        <Style Selector="Button">
+            <Setter Property="Background" Value="{StaticResource AppControlBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource AppTextBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource AppBorderStrongBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="12,7"/>
+            <Setter Property="MinHeight" Value="34"/>
+            <Setter Property="CornerRadius" Value="6"/>
+        </Style>
+
+        <Style Selector="Button:pointerover">
+            <Setter Property="Background" Value="{StaticResource AppControlHoverBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource AppTextBrush}"/>
+            <Setter Property="BorderBrush" Value="#98A8B8"/>
+        </Style>
+
+        <Style Selector="Button:pressed">
+            <Setter Property="Background" Value="{StaticResource AppControlPressedBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource AppTextBrush}"/>
+        </Style>
+
+        <Style Selector="Button:disabled">
+            <Setter Property="Foreground" Value="{StaticResource AppMutedTextBrush}"/>
+            <Setter Property="Background" Value="#EDF1F5"/>
+            <Setter Property="BorderBrush" Value="{StaticResource AppBorderBrush}"/>
+            <Setter Property="Opacity" Value="0.75"/>
+        </Style>
+
+        <Style Selector="TextBox">
+            <Setter Property="Background" Value="{StaticResource AppSurfaceBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource AppTextBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource AppBorderStrongBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="MinHeight" Value="34"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="SelectionBrush" Value="{StaticResource AppSelectionBrush}"/>
+        </Style>
+
+        <Style Selector="TextBox:focus">
+            <Setter Property="BorderBrush" Value="#6E879D"/>
+        </Style>
+
+        <Style Selector="ComboBox">
+            <Setter Property="Background" Value="{StaticResource AppSurfaceBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource AppTextBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource AppBorderStrongBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="MinHeight" Value="34"/>
+            <Setter Property="Padding" Value="10,6"/>
+        </Style>
+
+        <Style Selector="ComboBox:pointerover">
+            <Setter Property="Background" Value="{StaticResource AppControlHoverBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource AppTextBrush}"/>
+        </Style>
+
+        <Style Selector="ComboBoxItem">
+            <Setter Property="Background" Value="{StaticResource AppSurfaceBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource AppTextBrush}"/>
+        </Style>
+
+        <Style Selector="ComboBoxItem:pointerover">
+            <Setter Property="Background" Value="{StaticResource AppControlHoverBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource AppTextBrush}"/>
+        </Style>
+
+        <Style Selector="ComboBoxItem:selected">
+            <Setter Property="Background" Value="{StaticResource AppSelectionBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource AppTextBrush}"/>
+        </Style>
+
+        <Style Selector="NumericUpDown">
+            <Setter Property="Background" Value="{StaticResource AppSurfaceBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource AppTextBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource AppBorderStrongBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="MinHeight" Value="34"/>
+        </Style>
+
+        <Style Selector="CheckBox">
+            <Setter Property="Foreground" Value="{StaticResource AppTextBrush}"/>
+        </Style>
+
+        <Style Selector="CheckBox:disabled">
+            <Setter Property="Foreground" Value="{StaticResource AppMutedTextBrush}"/>
+            <Setter Property="Opacity" Value="0.85"/>
+        </Style>
+
+        <Style Selector="ListBox">
+            <Setter Property="Background" Value="{StaticResource AppSurfaceBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource AppTextBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource AppBorderBrush}"/>
+        </Style>
+
+        <Style Selector="ListBoxItem">
+            <Setter Property="Background" Value="{StaticResource AppSurfaceBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource AppTextBrush}"/>
+        </Style>
+
+        <Style Selector="ListBoxItem:pointerover">
+            <Setter Property="Background" Value="{StaticResource AppControlHoverBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource AppTextBrush}"/>
+        </Style>
+
+        <Style Selector="ListBoxItem:selected">
+            <Setter Property="Background" Value="{StaticResource AppSelectionBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource AppTextBrush}"/>
+        </Style>
     </Application.Styles>
 </Application>

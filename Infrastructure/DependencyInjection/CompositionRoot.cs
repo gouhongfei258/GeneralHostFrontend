@@ -1,16 +1,20 @@
 using GeneralHostFrontend.Application;
 using GeneralHostFrontend.Core.Communication;
 using GeneralHostFrontend.Core.Logging;
+using GeneralHostFrontend.Core.Logic;
 using GeneralHostFrontend.Core.Pipelines;
 using GeneralHostFrontend.Core.Settings;
 using GeneralHostFrontend.Infrastructure.Communication;
 using GeneralHostFrontend.Infrastructure.Database;
+using GeneralHostFrontend.Infrastructure.Logic;
 using GeneralHostFrontend.Infrastructure.Logging;
 using GeneralHostFrontend.Infrastructure.Logging.Serilog;
 using GeneralHostFrontend.Infrastructure.Pipelines;
 using GeneralHostFrontend.Infrastructure.Settings;
 using GeneralHostFrontend.ViewModels;
 using GeneralHostFrontend.ViewModels.Database;
+using GeneralHostFrontend.ViewModels.Devices;
+using GeneralHostFrontend.ViewModels.Logic;
 using GeneralHostFrontend.ViewModels.Tags;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -20,7 +24,7 @@ namespace GeneralHostFrontend.Infrastructure.DependencyInjection;
 
 public static class CompositionRoot
 {
-    public static ServiceProvider Build(HostSettings settings, ISettingsStore<HostSettings> settingsStore)
+    public static ServiceProvider Build(ISettingsStore<HostSettings> settingsStore)
     {
         var services = new ServiceCollection();
         var liveLogs = new InMemoryLiveLogService();
@@ -28,13 +32,11 @@ public static class CompositionRoot
 
         services.AddSingleton<ISettingsValidator<HostSettings>, HostSettingsValidator>();
         services.AddSingleton(settingsStore);
-        services.AddSingleton(settings);
-
         services.AddSingleton<ILiveLogService>(liveLogs);
         services.AddSingleton<ITagDataPipeline>(provider =>
         {
-            var settings = provider.GetRequiredService<HostSettings>();
-            return new TagDataPipeline(settings.Pipeline);
+            var settingsStore = provider.GetRequiredService<ISettingsStore<HostSettings>>();
+            return new TagDataPipeline(settingsStore.Current.Pipeline);
         });
 
         services.AddSingleton<ICommunicationDriverFactory, CommunicationDriverFactory>();
@@ -46,6 +48,13 @@ public static class CompositionRoot
         });
         services.AddSingleton<Core.Database.IDataViewerQueryService>(provider => provider.GetRequiredService<SqliteDataViewerQueryService>());
         services.AddSingleton<Core.Database.IDatabaseHealthMonitor>(provider => provider.GetRequiredService<SqliteDataViewerQueryService>());
+        services.AddSingleton<ILogicGraphStore>(_ =>
+        {
+            var graphPath = Path.Combine(AppContext.BaseDirectory, "Config", "logicgraph.json");
+            return new JsonLogicGraphStore(graphPath);
+        });
+        services.AddSingleton<ILogicCodeGenerator, CSharpLogicCodeGenerator>();
+        services.AddSingleton<ILogicCompiler, NatashaLogicCompiler>();
         services.AddSingleton<HostRuntime>();
 
         services.AddLogging(builder =>
@@ -56,6 +65,10 @@ public static class CompositionRoot
 
         services.AddTransient<DatabaseViewerViewModel>();
         services.AddSingleton<Func<DatabaseViewerViewModel>>(provider => provider.GetRequiredService<DatabaseViewerViewModel>);
+        services.AddTransient<DeviceEditorViewModel>();
+        services.AddSingleton<Func<DeviceEditorViewModel>>(provider => provider.GetRequiredService<DeviceEditorViewModel>);
+        services.AddTransient<LogicEditorViewModel>();
+        services.AddSingleton<Func<LogicEditorViewModel>>(provider => provider.GetRequiredService<LogicEditorViewModel>);
         services.AddTransient<TagEditorViewModel>();
         services.AddSingleton<Func<TagEditorViewModel>>(provider => provider.GetRequiredService<TagEditorViewModel>);
         services.AddSingleton<MainWindowViewModel>();

@@ -1,0 +1,141 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:GeneralHostFrontend.ViewModels.Devices"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1040" d:DesignHeight="660"
+        Width="1040"
+        Height="660"
+        MinWidth="900"
+        MinHeight="580"
+        x:Class="GeneralHostFrontend.Views.Devices.DeviceEditorWindow"
+        x:DataType="vm:DeviceEditorViewModel"
+        Title="Device Manager">
+
+    <Design.DataContext>
+        <vm:DeviceEditorViewModel/>
+    </Design.DataContext>
+
+    <Grid RowDefinitions="Auto,*,Auto" Background="#F4F6F8">
+        <Border Grid.Row="0" Background="White" BorderBrush="#DAE0E6" BorderThickness="0,0,0,1" Padding="16,10">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
+                <StackPanel>
+                    <TextBlock Text="Device Manager" Foreground="#1D2733" FontSize="18" FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding StatusMessage}" Foreground="#516071" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+                <Button Grid.Column="1" Command="{Binding ReloadCommand}" Content="Reload" MinWidth="78"/>
+                <Button Grid.Column="2" Command="{Binding TestConnectionCommand}" Content="Test Connection" MinWidth="128"/>
+                <Button Grid.Column="3" Command="{Binding SaveCommand}" Content="Save Changes" MinWidth="118"/>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1" ColumnDefinitions="330,*" ColumnSpacing="12" Margin="12">
+            <Border Grid.Column="0" Background="White" BorderBrush="#DAE0E6" BorderThickness="1" CornerRadius="8" Padding="12">
+                <Grid RowDefinitions="Auto,Auto,*" RowSpacing="8">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <TextBlock Text="Devices" FontSize="15" FontWeight="SemiBold" Foreground="#1D2733" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="1" Text="{Binding Devices.Count}" Foreground="#6B7785" VerticalAlignment="Center"/>
+                    </Grid>
+
+                    <Grid Grid.Row="1" ColumnDefinitions="*,*" ColumnSpacing="8">
+                        <Button Grid.Column="0"
+                                Command="{Binding AddCommand}"
+                                Content="Add Device"
+                                MinHeight="38"
+                                Background="#DDEFE9"
+                                Foreground="#163B33"
+                                BorderBrush="#9CCABE"
+                                FontWeight="SemiBold"/>
+                        <Button Grid.Column="1"
+                                Command="{Binding DeleteCommand}"
+                                Content="Delete Selected"
+                                MinHeight="38"
+                                Background="#F4E2E6"
+                                Foreground="#56202A"
+                                BorderBrush="#D4A8B1"
+                                FontWeight="SemiBold"/>
+                    </Grid>
+
+                    <ListBox Grid.Row="2"
+                             ItemsSource="{Binding Devices}"
+                             SelectedItem="{Binding SelectedDevice}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid ColumnDefinitions="*,Auto" Margin="0,5" ColumnSpacing="8">
+                                    <Grid RowDefinitions="Auto,Auto">
+                                        <TextBlock Text="{Binding DeviceId}" FontWeight="SemiBold" Foreground="#243142" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Grid.Row="1" Text="{Binding Summary}" Foreground="#6B7785" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                                    </Grid>
+                                    <Button Grid.Column="1"
+                                            Command="{Binding $parent[Window].DataContext.DeleteDeviceCommand}"
+                                            CommandParameter="{Binding}"
+                                            Content="Delete"
+                                            MinWidth="68"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="1" Background="White" BorderBrush="#DAE0E6" BorderThickness="1" CornerRadius="8" Padding="14">
+                <ScrollViewer>
+                    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="170,*" RowSpacing="12" ColumnSpacing="12"
+                          DataContext="{Binding SelectedDevice}">
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Device ID" VerticalAlignment="Center" Foreground="#1D2733"/>
+                        <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding DeviceId}"/>
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Protocol" VerticalAlignment="Center" Foreground="#1D2733"/>
+                        <ComboBox Grid.Row="1" Grid.Column="1"
+                                  ItemsSource="{Binding $parent[Window].DataContext.DriverKinds}"
+                                  SelectedItem="{Binding Kind}"/>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding $parent[Window].DataContext.AddressLabel}" VerticalAlignment="Center" Foreground="#1D2733"/>
+                        <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Address}"/>
+
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="TCP Port" VerticalAlignment="Center" Foreground="#1D2733"/>
+                        <NumericUpDown Grid.Row="3" Grid.Column="1"
+                                       Minimum="0"
+                                       Maximum="65535"
+                                       Increment="1"
+                                       Value="{Binding Port}"
+                                       IsEnabled="{Binding $parent[Window].DataContext.IsTcpEndpoint}"/>
+
+                        <Grid Grid.Row="4" Grid.ColumnSpan="2" ColumnDefinitions="170,*,Auto" ColumnSpacing="12">
+                            <TextBlock Grid.Column="0" Text="Parameters" VerticalAlignment="Center" Foreground="#1D2733"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding $parent[Window].DataContext.ParameterHint}"
+                                       Foreground="#6B7785"
+                                       TextTrimming="CharacterEllipsis"
+                                       VerticalAlignment="Center"/>
+                            <Button Grid.Column="2"
+                                    Command="{Binding $parent[Window].DataContext.ApplyDefaultsCommand}"
+                                    Content="Defaults"
+                                    MinWidth="86"/>
+                        </Grid>
+
+                        <TextBox Grid.Row="5"
+                                 Grid.ColumnSpan="2"
+                                 Text="{Binding ParametersText}"
+                                 AcceptsReturn="True"
+                                 MinHeight="220"
+                                 TextWrapping="NoWrap"
+                                 VerticalContentAlignment="Top"
+                                 FontFamily="Consolas, Menlo, monospace"/>
+
+                        <Border Grid.Row="6" Grid.ColumnSpan="2" Background="#EEF3F7" CornerRadius="6" Padding="12">
+                            <TextBlock Text="Use one key=value pair per line. Address is an IP for TCP PLCs, a serial port name for Modbus RTU, or sim://... for Simulator."
+                                       Foreground="#516071"
+                                       TextWrapping="Wrap"/>
+                        </Border>
+                    </Grid>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+
+        <Border Grid.Row="2" Background="#EEF3F7" Padding="12,8">
+            <TextBlock Text="Save Changes writes Config/hostsettings.json. Running scans are restarted through the existing settings hot reload path."
+                       Foreground="#516071"/>
+        </Border>
+    </Grid>
+</Window>

@@ -5,21 +5,29 @@ using CommunityToolkit.Mvvm.Input;
 using GeneralHostFrontend.Application;
 using GeneralHostFrontend.Core.Logging;
 using GeneralHostFrontend.Core.Pipelines;
+using GeneralHostFrontend.Core.Settings;
+using GeneralHostFrontend.Core.Tags;
 using GeneralHostFrontend.ViewModels.Database;
 using GeneralHostFrontend.ViewModels.Dashboard;
+using GeneralHostFrontend.ViewModels.Devices;
+using GeneralHostFrontend.ViewModels.Logic;
 using GeneralHostFrontend.ViewModels.Tags;
 using GeneralHostFrontend.Views.Database;
+using GeneralHostFrontend.Views.Devices;
+using GeneralHostFrontend.Views.Logic;
 using GeneralHostFrontend.Views.Tags;
 
 namespace GeneralHostFrontend.ViewModels;
 
 public partial class MainWindowViewModel : ViewModelBase, IAsyncDisposable
 {
-    private readonly HostSettings _settings;
+    private readonly ISettingsStore<HostSettings> _settingsStore;
     private readonly HostRuntime _runtime;
     private readonly ITagDataPipeline _pipeline;
     private readonly ILiveLogService _logs;
     private readonly Func<DatabaseViewerViewModel> _databaseViewerFactory;
+    private readonly Func<DeviceEditorViewModel> _deviceEditorFactory;
+    private readonly Func<LogicEditorViewModel> _logicEditorFactory;
     private readonly Func<TagEditorViewModel> _tagEditorFactory;
     private readonly CancellationTokenSource _stop = new();
     private readonly List<Task> _subscriptions = new();
@@ -39,44 +47,39 @@ public partial class MainWindowViewModel : ViewModelBase, IAsyncDisposable
 
     public MainWindowViewModel()
     {
-        _settings = new HostSettings();
+        _settingsStore = null!;
         _runtime = null!;
         _pipeline = null!;
         _logs = null!;
         _databaseViewerFactory = null!;
+        _deviceEditorFactory = null!;
+        _logicEditorFactory = null!;
         _tagEditorFactory = null!;
     }
 
     public MainWindowViewModel(
-        HostSettings settings,
+        ISettingsStore<HostSettings> settingsStore,
         HostRuntime runtime,
         ITagDataPipeline pipeline,
         ILiveLogService logs,
         Func<DatabaseViewerViewModel> databaseViewerFactory,
+        Func<DeviceEditorViewModel> deviceEditorFactory,
+        Func<LogicEditorViewModel> logicEditorFactory,
         Func<TagEditorViewModel> tagEditorFactory)
     {
         StartupTrace.Write("MainWindowViewModel constructor begin.");
-        _settings = settings;
+        _settingsStore = settingsStore;
         _runtime = runtime;
         _pipeline = pipeline;
         _logs = logs;
         _databaseViewerFactory = databaseViewerFactory;
+        _deviceEditorFactory = deviceEditorFactory;
+        _logicEditorFactory = logicEditorFactory;
         _tagEditorFactory = tagEditorFactory;
         RuntimeState = _runtime.State.ToString();
         StartupTrace.Write("MainWindowViewModel dependencies assigned.");
 
-        foreach (var tag in _settings.Tags)
-        {
-            var item = new TagValueViewModel
-            {
-                Name = tag.Name,
-                Unit = tag.EngineeringUnit,
-                Timestamp = DateTimeOffset.Now
-            };
-
-            _tagIndex[tag.Name] = item;
-            Tags.Add(item);
-        }
+        ApplyTags(_settingsStore.Current.Tags);
         StartupTrace.Write("MainWindowViewModel tags loaded.");
 
         foreach (var entry in _logs.Snapshot(new LogFilter(HostLogLevel.Information), 200))
@@ -89,6 +92,8 @@ public partial class MainWindowViewModel : ViewModelBase, IAsyncDisposable
         StartupTrace.Write("MainWindowViewModel tag subscription started.");
         _subscriptions.Add(ObserveLogsAsync(_stop.Token));
         StartupTrace.Write("MainWindowViewModel log subscription started.");
+        _subscriptions.Add(ObserveSettingsAsync(_stop.Token));
+        StartupTrace.Write("MainWindowViewModel settings subscription started.");
         StartupTrace.Write("MainWindowViewModel constructor completed.");
     }
 
@@ -134,6 +139,21 @@ public partial class MainWindowViewModel : ViewModelBase, IAsyncDisposable
     }
 
     [RelayCommand]
+    private void OpenDeviceEditor()
+    {
+        if (_deviceEditorFactory is null)
+        {
+            return;
+        }
+
+        var window = new DeviceEditorWindow
+        {
+            DataContext = _deviceEditorFactory()
+        };
+        window.Show();
+    }
+
+    [RelayCommand]
     private void OpenTagEditor()
     {
         if (_tagEditorFactory is null)
@@ -144,6 +164,21 @@ public partial class MainWindowViewModel : ViewModelBase, IAsyncDisposable
         var window = new TagEditorWindow
         {
             DataContext = _tagEditorFactory()
+        };
+        window.Show();
+    }
+
+    [RelayCommand]
+    private void OpenLogicEditor()
+    {
+        if (_logicEditorFactory is null)
+        {
+            return;
+        }
+
+        var window = new LogicEditorWindow
+        {
+            DataContext = _logicEditorFactory()
         };
         window.Show();
     }
@@ -174,6 +209,38 @@ public partial class MainWindowViewModel : ViewModelBase, IAsyncDisposable
                             item.Update(sample);
                         }
                     }
+                });
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    private async Task ObserveSettingsAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (_settingsStore is null)
+            {
+                return;
+            }
+
+            var isInitialSettings = true;
+            await foreach (var settings in _settingsStore.WatchAsync(cancellationToken))
+            {
+                await _runtime.ApplySettingsAsync(settings, cancellationToken);
+
+                if (isInitialSettings)
+                {
+                    isInitialSettings = false;
+                    continue;
+                }
+
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    ApplyTags(settings.Tags);
+                    RuntimeState = _runtime.State.ToString();
                 });
             }
         }
@@ -227,6 +294,49 @@ public partial class MainWindowViewModel : ViewModelBase, IAsyncDisposable
         return string.IsNullOrWhiteSpace(LogKeyword)
             || entry.Source.Contains(LogKeyword, StringComparison.OrdinalIgnoreCase)
             || entry.Message.Contains(LogKeyword, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void ApplyTags(IReadOnlyList<TagDefinition> definitions)
+    {
+        var nextNames = definitions
+            .Select(tag => tag.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        for (var index = Tags.Count - 1; index >= 0; index--)
+        {
+            var item = Tags[index];
+            if (!nextNames.Contains(item.Name))
+            {
+                _tagIndex.Remove(item.Name);
+                Tags.RemoveAt(index);
+            }
+        }
+
+        for (var index = 0; index < definitions.Count; index++)
+        {
+            var tag = definitions[index];
+            if (!_tagIndex.TryGetValue(tag.Name, out var item))
+            {
+                item = new TagValueViewModel
+                {
+                    Name = tag.Name,
+                    Unit = tag.EngineeringUnit,
+                    Timestamp = DateTimeOffset.Now
+                };
+                _tagIndex[tag.Name] = item;
+                Tags.Insert(Math.Min(index, Tags.Count), item);
+            }
+            else
+            {
+                item.Unit = tag.EngineeringUnit;
+                item.Name = tag.Name;
+                var currentIndex = Tags.IndexOf(item);
+                if (currentIndex >= 0 && currentIndex != index)
+                {
+                    Tags.Move(currentIndex, Math.Min(index, Tags.Count - 1));
+                }
+            }
+        }
     }
 
     public async ValueTask DisposeAsync()

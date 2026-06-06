@@ -1,0 +1,240 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:GeneralHostFrontend.ViewModels.Logic"
+        xmlns:logic="using:GeneralHostFrontend.Core.Logic"
+        xmlns:nodify="using:NodifyM.Avalonia.Controls"
+        xmlns:nodifyVm="using:NodifyM.Avalonia.ViewModelBase"
+        xmlns:nodifyConverters="using:NodifyM.Avalonia.Converters"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="780"
+        Width="1280"
+        Height="780"
+        MinWidth="1060"
+        MinHeight="680"
+        x:Class="GeneralHostFrontend.Views.Logic.LogicEditorWindow"
+        x:DataType="vm:LogicEditorViewModel"
+        Title="Logic Editor">
+
+    <Design.DataContext>
+        <vm:LogicEditorViewModel/>
+    </Design.DataContext>
+
+    <Window.Resources>
+        <nodifyConverters:FlowToDirectionConverter x:Key="FlowToDirectionConverter"/>
+
+        <DataTemplate x:Key="LogicConnectionTemplate" DataType="{x:Type nodifyVm:ConnectionViewModelBase}">
+            <Grid>
+                <nodify:Connection Source="{Binding Source.Anchor}"
+                                   Target="{Binding Target.Anchor}"
+                                   Text="{Binding Text}"
+                                   TextBrush="#1D2733"
+                                   TextPoint="50%,50%"
+                                   SplitCommand="{Binding SplitConnectionCommand}"
+                                   DisconnectCommand="{Binding DisconnectConnectionCommand}"
+                                   Direction="{Binding ., Converter={StaticResource FlowToDirectionConverter}}"
+                                   Focusable="True"
+                                   StrokeThickness="3"
+                                   Fill="#0B6B5B"
+                                   Spacing="20">
+                    <nodify:Connection.Stroke>
+                        <SolidColorBrush Color="#0B6B5B" Opacity="0.92"/>
+                    </nodify:Connection.Stroke>
+                </nodify:Connection>
+            </Grid>
+        </DataTemplate>
+
+        <DataTemplate x:Key="LogicPendingConnectionTemplate" DataType="{x:Type nodifyVm:PendingConnectionViewModelBase}">
+            <nodify:PendingConnection StartedCommand="{Binding StartCommand}"
+                                       CompletedCommand="{Binding FinishCommand}"
+                                       EnablePreview="True"
+                                       EnableSnapping="True"
+                                       Direction="{Binding Source.Flow, Converter={StaticResource FlowToDirectionConverter}}"
+                                       PreviewTarget="{Binding PreviewTarget, Mode=OneWayToSource}"
+                                       StrokeThickness="3">
+                <nodify:PendingConnection.Stroke>
+                    <SolidColorBrush Color="#8A5A44" Opacity="0.92"/>
+                </nodify:PendingConnection.Stroke>
+                <nodify:PendingConnection.Background>
+                    <SolidColorBrush Color="#8A5A44" Opacity="0.38"/>
+                </nodify:PendingConnection.Background>
+                <TextBlock Text="{Binding PreviewText}"/>
+            </nodify:PendingConnection>
+        </DataTemplate>
+
+    </Window.Resources>
+
+    <Grid RowDefinitions="Auto,*" Background="#F4F6F8">
+        <Border Grid.Row="0" Background="White" BorderBrush="#DAE0E6" BorderThickness="0,0,0,1" Padding="16,10">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
+                <StackPanel>
+                    <TextBlock Text="Logic Editor" Foreground="#1D2733" FontSize="18" FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding StatusMessage}" Foreground="#516071" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+                <Button Grid.Column="1" Command="{Binding LoadCommand}" Content="Reload" MinWidth="78"/>
+                <Button Grid.Column="2" Command="{Binding GenerateCodeCommand}" Content="Generate C#" MinWidth="112"/>
+                <Button Grid.Column="3" Command="{Binding CompileCommand}" Content="Compile" MinWidth="88"/>
+                <Button Grid.Column="4" Command="{Binding SaveCommand}" Content="Save Graph" MinWidth="108"/>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1" ColumnDefinitions="220,*,360" ColumnSpacing="12" Margin="12">
+            <Border Grid.Column="0" Background="White" BorderBrush="#DAE0E6" BorderThickness="1" CornerRadius="8" Padding="12">
+                <Grid RowDefinitions="Auto,Auto,Auto,Auto,*" RowSpacing="10">
+                    <TextBlock Text="Palette" FontSize="15" FontWeight="SemiBold" Foreground="#1D2733"/>
+                    <ComboBox Grid.Row="1"
+                              ItemsSource="{Binding NodeKinds}"
+                              SelectedItem="{Binding SelectedNodeKind}"/>
+                    <Button Grid.Row="2"
+                            Command="{Binding AddNodeCommand}"
+                            Content="Add Node"
+                            MinHeight="38"
+                            Background="#DDEFE9"
+                            Foreground="#163B33"
+                            BorderBrush="#9CCABE"
+                            FontWeight="SemiBold"/>
+                    <Button Grid.Row="3"
+                            Command="{Binding DeleteSelectedNodeCommand}"
+                            Content="Delete Selected"
+                            MinHeight="38"
+                            Background="#F4E2E6"
+                            Foreground="#56202A"
+                            BorderBrush="#D4A8B1"
+                            FontWeight="SemiBold"/>
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="1" Background="#F8FAFC" BorderBrush="#DAE0E6" BorderThickness="1" CornerRadius="8">
+                <Grid>
+                    <nodify:NodifyEditor x:Name="Editor"
+                                         ItemsSource="{Binding Nodes}"
+                                         Connections="{Binding Connections}"
+                                         SelectedItems="{Binding SelectedNodes}"
+                                         PendingConnection="{Binding PendingConnection}"
+                                         DisconnectConnectorCommand="{Binding DisconnectConnectorCommand}"
+                                         ConnectionTemplate="{StaticResource LogicConnectionTemplate}"
+                                         PendingConnectionTemplate="{StaticResource LogicPendingConnectionTemplate}"
+                                         Background="Transparent"
+                                         Zoom="1"
+                                         AllowAlign="True"
+                                         AllowAutoPanning="True">
+                        <nodify:NodifyEditor.ItemTemplate>
+                            <nodify:NodeTemplateSelector>
+                                <DataTemplate DataType="{x:Type vm:LogicNodeViewModel}">
+                                    <nodify:Node Header="{Binding Title}"
+                                                 IsResize="False"
+                                                 Location="{Binding Location, Mode=TwoWay}"
+                                                 Input="{Binding Input}"
+                                                 Output="{Binding Output}"
+                                                 Background="#FFFFFF"
+                                                 Foreground="#1D2733">
+                                        <nodify:Node.ContentBrush>
+                                            <SolidColorBrush Color="#FFFFFF"/>
+                                        </nodify:Node.ContentBrush>
+                                        <nodify:Node.HeaderBrush>
+                                            <SolidColorBrush Color="#DDEFE9"/>
+                                        </nodify:Node.HeaderBrush>
+                                        <nodify:Node.InputConnectorTemplate>
+                                            <DataTemplate DataType="{x:Type vm:LogicConnectorViewModel}">
+                                                <nodify:NodeInput Anchor="{Binding Anchor, Mode=OneWayToSource}"
+                                                                  IsConnected="{Binding IsConnected, Mode=TwoWay}"
+                                                                  VerticalAlignment="Center"
+                                                                  BorderBrush="#0B6B5B"
+                                                                  Background="#FFFFFF"
+                                                                  Foreground="#1D2733"
+                                                                  ToolTip.Tip="{Binding DisplayKind}">
+                                                    <nodify:NodeInput.Header>
+                                                        <TextBlock Text="{Binding Title}"
+                                                                   Foreground="#1D2733"
+                                                                   FontSize="11"/>
+                                                    </nodify:NodeInput.Header>
+                                                </nodify:NodeInput>
+                                            </DataTemplate>
+                                        </nodify:Node.InputConnectorTemplate>
+                                        <nodify:Node.OutputConnectorTemplate>
+                                            <DataTemplate DataType="{x:Type vm:LogicConnectorViewModel}">
+                                                <nodify:NodeOutput Anchor="{Binding Anchor, Mode=OneWayToSource}"
+                                                                   IsConnected="{Binding IsConnected, Mode=TwoWay}"
+                                                                   VerticalAlignment="Center"
+                                                                   BorderBrush="#0B6B5B"
+                                                                   Background="#FFFFFF"
+                                                                   Foreground="#1D2733"
+                                                                   ToolTip.Tip="{Binding DisplayKind}">
+                                                    <nodify:NodeOutput.Header>
+                                                        <TextBlock Text="{Binding Title}"
+                                                                   Foreground="#1D2733"
+                                                                   FontSize="11"/>
+                                                    </nodify:NodeOutput.Header>
+                                                </nodify:NodeOutput>
+                                            </DataTemplate>
+                                        </nodify:Node.OutputConnectorTemplate>
+                                        <Border Background="#FFFFFF" BorderThickness="1" CornerRadius="6" Padding="10" MinWidth="180">
+                                            <Border.Styles>
+                                                <Style Selector="Border">
+                                                    <Setter Property="BorderBrush" Value="#DAE0E6"/>
+                                                </Style>
+                                                <Style Selector="nodify|Node[IsSelected=True] Border">
+                                                    <Setter Property="BorderBrush" Value="#0B6B5B"/>
+                                                </Style>
+                                            </Border.Styles>
+                                            <Grid RowDefinitions="Auto,Auto" RowSpacing="6">
+                                                <TextBlock Text="{Binding Kind}" Foreground="#1D2733" FontWeight="SemiBold"/>
+                                                <ItemsControl Grid.Row="1" ItemsSource="{Binding Properties}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Grid ColumnDefinitions="80,*" ColumnSpacing="6" Margin="0,2">
+                                                                <TextBlock Text="{Binding Key}" Foreground="#516071" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                                                                <TextBlock Grid.Column="1" Text="{Binding Value}" Foreground="#243142" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </Grid>
+                                        </Border>
+                                    </nodify:Node>
+                                </DataTemplate>
+                            </nodify:NodeTemplateSelector>
+                        </nodify:NodifyEditor.ItemTemplate>
+                    </nodify:NodifyEditor>
+                    <nodify:NodifyEditorMinimap Width="180"
+                                                Height="120"
+                                                Editor="{Binding #Editor}"
+                                                HorizontalAlignment="Right"
+                                                VerticalAlignment="Bottom"
+                                                Margin="12"
+                                                MapBackground="#F4F6F8"
+                                                MapBorderBrush="#B9C3CF"
+                                                NodeBrush="#B7CADB"
+                                                ViewportBrush="#80DDE8F1"/>
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="2" Background="White" BorderBrush="#DAE0E6" BorderThickness="1" CornerRadius="8" Padding="12">
+                <Grid RowDefinitions="Auto,180,Auto,*,Auto,110" RowSpacing="8">
+                    <TextBlock Text="Selected Node" FontSize="15" FontWeight="SemiBold" Foreground="#1D2733"/>
+                    <TextBox Grid.Row="1"
+                             Text="{Binding SelectedNode.PropertyText}"
+                             AcceptsReturn="True"
+                             VerticalContentAlignment="Top"
+                             FontFamily="Consolas, Menlo, monospace"/>
+                    <TextBlock Grid.Row="2" Text="Generated C#" FontSize="15" FontWeight="SemiBold" Foreground="#1D2733"/>
+                    <TextBox Grid.Row="3"
+                             Text="{Binding GeneratedCode}"
+                             AcceptsReturn="True"
+                             IsReadOnly="True"
+                             VerticalContentAlignment="Top"
+                             FontFamily="Consolas, Menlo, monospace"
+                             FontSize="12"/>
+                    <TextBlock Grid.Row="4" Text="Diagnostics" FontSize="15" FontWeight="SemiBold" Foreground="#1D2733"/>
+                    <TextBox Grid.Row="5"
+                             Text="{Binding Diagnostics}"
+                             AcceptsReturn="True"
+                             IsReadOnly="True"
+                             VerticalContentAlignment="Top"
+                             FontSize="12"/>
+                </Grid>
+            </Border>
+        </Grid>
+
+    </Grid>
+</Window>

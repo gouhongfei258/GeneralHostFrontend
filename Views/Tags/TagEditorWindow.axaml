@@ -17,11 +17,11 @@
     </Design.DataContext>
 
     <Grid RowDefinitions="Auto,*,Auto" Background="#F4F6F8">
-        <Border Grid.Row="0" Background="#18202A" Padding="16,10">
+        <Border Grid.Row="0" Background="White" BorderBrush="#DAE0E6" BorderThickness="0,0,0,1" Padding="16,10">
             <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
                 <StackPanel>
-                    <TextBlock Text="Tag Manager" Foreground="White" FontSize="18" FontWeight="SemiBold"/>
-                    <TextBlock Text="{Binding StatusMessage}" Foreground="#B9C3CF" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="Tag Manager" Foreground="#1D2733" FontSize="18" FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding StatusMessage}" Foreground="#516071" FontSize="11" TextTrimming="CharacterEllipsis"/>
                 </StackPanel>
                 <Button Grid.Column="1" Command="{Binding ReloadCommand}" Content="Reload" MinWidth="78"/>
                 <Button Grid.Column="2" Command="{Binding SaveCommand}" Content="Save Changes" MinWidth="118"/>
@@ -41,15 +41,17 @@
                                 Command="{Binding AddCommand}"
                                 Content="Add Tag"
                                 MinHeight="38"
-                                Background="#0B6B5B"
-                                Foreground="White"
+                                Background="#DDEFE9"
+                                Foreground="#163B33"
+                                BorderBrush="#9CCABE"
                                 FontWeight="SemiBold"/>
                         <Button Grid.Column="1"
                                 Command="{Binding DeleteCommand}"
                                 Content="Delete Selected"
                                 MinHeight="38"
-                                Background="#8A2D3B"
-                                Foreground="White"
+                                Background="#F4E2E6"
+                                Foreground="#56202A"
+                                BorderBrush="#D4A8B1"
                                 FontWeight="SemiBold"/>
                     </Grid>
 
@@ -119,7 +121,7 @@
         </Grid>
 
         <Border Grid.Row="2" Background="#EEF3F7" Padding="12,8">
-            <TextBlock Text="Add/Delete/Edit changes are staged in this window. Click Save Changes to write Config/hostsettings.json. Restart acquisition to apply runtime scan changes."
+            <TextBlock Text="Add/Delete/Edit changes are staged in this window. Click Save Changes to write Config/hostsettings.json and refresh the runtime scan."
                        Foreground="#516071"/>
         </Border>
     </Grid>

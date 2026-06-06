@@ -1,6 +1,7 @@
 using GeneralHostFrontend.Core.Communication;
 using GeneralHostFrontend.Core.Logging;
 using GeneralHostFrontend.Core.Pipelines;
+using GeneralHostFrontend.Core.Settings;
 using GeneralHostFrontend.Core.Tags;
 using Microsoft.Extensions.Logging;
 
@@ -8,20 +9,21 @@ namespace GeneralHostFrontend.Application;
 
 public sealed class HostRuntime : IAsyncDisposable
 {
-    private readonly HostSettings _settings;
+    private readonly SemaphoreSlim _lifecycleLock = new(1, 1);
     private readonly ICommunicationConnectionPool _connectionPool;
     private readonly ITagDataPipeline _pipeline;
     private readonly ILogger<HostRuntime> _logger;
     private readonly List<Task> _workers = new();
+    private HostSettings _settings;
     private CancellationTokenSource? _runCts;
 
     public HostRuntime(
-        HostSettings settings,
+        ISettingsStore<HostSettings> settingsStore,
         ICommunicationConnectionPool connectionPool,
         ITagDataPipeline pipeline,
         ILogger<HostRuntime> logger)
     {
-        _settings = settings;
+        _settings = settingsStore.Current;
         _connectionPool = connectionPool;
         _pipeline = pipeline;
         _logger = logger;
@@ -33,35 +35,101 @@ public sealed class HostRuntime : IAsyncDisposable
 
     public HostRuntimeState State { get; private set; } = HostRuntimeState.Stopped;
 
-    public Task StartAsync(CancellationToken cancellationToken = default)
+    public async Task StartAsync(CancellationToken cancellationToken = default)
     {
-        if (_workers.Count > 0)
+        await _lifecycleLock.WaitAsync(cancellationToken);
+        try
         {
-            return Task.CompletedTask;
-        }
+            if (State is HostRuntimeState.Running || _workers.Count > 0)
+            {
+                return;
+            }
 
+            StartUnlocked(cancellationToken);
+        }
+        finally
+        {
+            _lifecycleLock.Release();
+        }
+    }
+
+    public async Task StopAsync()
+    {
+        await _lifecycleLock.WaitAsync();
+        try
+        {
+            await StopUnlockedAsync();
+        }
+        finally
+        {
+            _lifecycleLock.Release();
+        }
+    }
+
+    public async Task ApplySettingsAsync(HostSettings settings, CancellationToken cancellationToken = default)
+    {
+        await _lifecycleLock.WaitAsync(cancellationToken);
+        try
+        {
+            if (EqualityComparer<HostSettings>.Default.Equals(_settings, settings))
+            {
+                return;
+            }
+
+            var resumeScanning = State is HostRuntimeState.Running || _workers.Count > 0;
+            if (resumeScanning)
+            {
+                _logger.LogInformation("Host settings changed. Restarting runtime scan with {TagCount} tag(s).", settings.Tags.Count);
+                await StopUnlockedAsync();
+            }
+
+            _settings = settings;
+
+            if (resumeScanning)
+            {
+                StartUnlocked(cancellationToken);
+            }
+            else
+            {
+                _logger.LogInformation("Host settings changed. Runtime will use {TagCount} tag(s) on next start.", settings.Tags.Count);
+            }
+        }
+        finally
+        {
+            _lifecycleLock.Release();
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await StopAsync();
+        _lifecycleLock.Dispose();
+    }
+
+    private void StartUnlocked(CancellationToken cancellationToken)
+    {
         _runCts?.Dispose();
         _runCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var runToken = _runCts.Token;
         State = HostRuntimeState.Running;
         _logger.LogInformation("Host runtime starting.");
 
-        foreach (var tagGroup in _settings.Tags.Where(tag => tag.CanRead).GroupBy(tag => tag.DeviceId))
+        var settings = _settings;
+        foreach (var tagGroup in settings.Tags.Where(tag => tag.CanRead).GroupBy(tag => tag.DeviceId))
         {
-            var endpoint = _settings.Devices.FirstOrDefault(device => device.DeviceId == tagGroup.Key);
+            var endpoint = settings.Devices.FirstOrDefault(device => device.DeviceId == tagGroup.Key);
             if (endpoint is null)
             {
                 _logger.LogWarning("No endpoint configured for device '{DeviceId}'.", tagGroup.Key);
                 continue;
             }
 
-            _workers.Add(Task.Run(() => ScanDeviceAsync(endpoint, tagGroup.ToArray(), _runCts.Token), CancellationToken.None));
-            _workers.Add(Task.Run(() => HeartbeatDeviceAsync(endpoint, _runCts.Token), CancellationToken.None));
+            _workers.Add(Task.Run(() => ScanDeviceAsync(endpoint, settings.Communication, tagGroup.ToArray(), runToken), CancellationToken.None));
+            _workers.Add(Task.Run(() => HeartbeatDeviceAsync(endpoint, settings.Communication, runToken), CancellationToken.None));
         }
-
-        return Task.CompletedTask;
     }
 
-    public async Task StopAsync()
+    private async Task StopUnlockedAsync()
     {
         if (_workers.Count == 0)
         {
@@ -90,14 +158,13 @@ public sealed class HostRuntime : IAsyncDisposable
         _logger.LogInformation("Host runtime stopped.");
     }
 
-    public async ValueTask DisposeAsync()
+    private async Task ScanDeviceAsync(
+        CommunicationEndpoint endpoint,
+        CommunicationOptions options,
+        IReadOnlyList<TagDefinition> tags,
+        CancellationToken cancellationToken)
     {
-        await StopAsync();
-    }
-
-    private async Task ScanDeviceAsync(CommunicationEndpoint endpoint, IReadOnlyList<TagDefinition> tags, CancellationToken cancellationToken)
-    {
-        var driver = await _connectionPool.GetOrCreateAsync(endpoint, _settings.Communication, cancellationToken);
+        var driver = await _connectionPool.GetOrCreateAsync(endpoint, options, cancellationToken);
         var nextScan = tags.ToDictionary(tag => tag.Name, _ => DateTimeOffset.MinValue);
 
         while (!cancellationToken.IsCancellationRequested)
@@ -123,7 +190,7 @@ public sealed class HostRuntime : IAsyncDisposable
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     _logger.LogError(ex, "Scan failed for device {DeviceId}.", endpoint.DeviceId);
-                    await Task.Delay(_settings.Communication.ReconnectDelay, cancellationToken);
+                    await Task.Delay(options.ReconnectDelay, cancellationToken);
                     await driver.ConnectAsync(cancellationToken);
                 }
             }
@@ -132,10 +199,10 @@ public sealed class HostRuntime : IAsyncDisposable
         }
     }
 
-    private async Task HeartbeatDeviceAsync(CommunicationEndpoint endpoint, CancellationToken cancellationToken)
+    private async Task HeartbeatDeviceAsync(CommunicationEndpoint endpoint, CommunicationOptions options, CancellationToken cancellationToken)
     {
-        var driver = await _connectionPool.GetOrCreateAsync(endpoint, _settings.Communication, cancellationToken);
-        using var timer = new PeriodicTimer(_settings.Communication.HeartbeatPeriod);
+        var driver = await _connectionPool.GetOrCreateAsync(endpoint, options, cancellationToken);
+        using var timer = new PeriodicTimer(options.HeartbeatPeriod);
 
         while (await timer.WaitForNextTickAsync(cancellationToken))
         {
@@ -151,7 +218,7 @@ public sealed class HostRuntime : IAsyncDisposable
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 _logger.LogError(ex, "Heartbeat exception for device {DeviceId}.", endpoint.DeviceId);
-                await Task.Delay(_settings.Communication.ReconnectDelay, cancellationToken);
+                await Task.Delay(options.ReconnectDelay, cancellationToken);
             }
         }
     }

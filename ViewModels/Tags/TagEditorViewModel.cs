@@ -24,11 +24,11 @@ public sealed partial class TagEditorViewModel : ViewModelBase
         _settings = new HostSettings();
     }
 
-    public TagEditorViewModel(ISettingsStore<HostSettings> settingsStore, HostSettings settings)
+    public TagEditorViewModel(ISettingsStore<HostSettings> settingsStore)
     {
         _settingsStore = settingsStore;
-        _settings = settings;
-        LoadFromSettings(settings);
+        _settings = settingsStore.Current;
+        LoadFromSettings(_settings);
     }
 
     public ObservableCollection<EditableTagViewModel> Tags { get; } = new();
@@ -123,7 +123,7 @@ public sealed partial class TagEditorViewModel : ViewModelBase
             var next = _settings with { Tags = tags };
             await _settingsStore.SaveAsync(next);
             _settings = next;
-            StatusMessage = "Tags saved. Restart acquisition to apply runtime changes.";
+            StatusMessage = "Tags saved. Runtime reload is applying now.";
         }
         catch (Exception ex)
         {

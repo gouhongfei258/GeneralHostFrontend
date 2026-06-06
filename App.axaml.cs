@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Threading;
 using GeneralHostFrontend.Application;
 using GeneralHostFrontend.Core.Settings;
 using GeneralHostFrontend.Infrastructure.DependencyInjection;
@@ -20,6 +21,7 @@ namespace GeneralHostFrontend
         public override void Initialize()
         {
             StartupTrace.Write("App.Initialize begin.");
+            Dispatcher.UIThread.UnhandledException += OnUiThreadUnhandledException;
             AvaloniaXamlLoader.Load(this);
             StartupTrace.Write("App.Initialize completed.");
         }
@@ -32,10 +34,10 @@ namespace GeneralHostFrontend
             ISettingsStore<HostSettings> settingsStore = new JsonSettingsStore<HostSettings>(settingsPath, validator);
             StartupTrace.Write("Settings store created.");
             StartupTrace.Write("Settings load begin.");
-            var settings = settingsStore.LoadAsync().GetAwaiter().GetResult();
+            settingsStore.LoadAsync().GetAwaiter().GetResult();
             StartupTrace.Write("Settings loaded.");
 
-            _services = CompositionRoot.Build(settings, settingsStore);
+            _services = CompositionRoot.Build(settingsStore);
             StartupTrace.Write("CompositionRoot built.");
 
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
@@ -79,6 +81,20 @@ namespace GeneralHostFrontend
 
                 await Log.CloseAndFlushAsync();
             }, TimeSpan.FromSeconds(2));
+        }
+
+        private static void OnUiThreadUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+        {
+            try
+            {
+                File.WriteAllText(Path.Combine(AppContext.BaseDirectory, "startup-error.log"), e.Exception.ToString());
+                StartupTrace.Write($"UI exception handled: {e.Exception.Message}");
+            }
+            catch
+            {
+            }
+
+            e.Handled = true;
         }
 
         private static async Task RunWithTimeoutAsync(Func<Task> action, TimeSpan timeout)

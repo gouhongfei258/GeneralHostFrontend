@@ -17,17 +17,17 @@
     </Design.DataContext>
 
     <Grid RowDefinitions="Auto,*" Background="#F4F6F8">
-        <Border Grid.Row="0" Background="#18202A" Padding="16,10">
+        <Border Grid.Row="0" Background="White" BorderBrush="#DAE0E6" BorderThickness="0,0,0,1" Padding="16,10">
             <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8">
                 <StackPanel>
-                    <TextBlock Text="Embedded Database Viewer" Foreground="White" FontSize="18" FontWeight="SemiBold"/>
-                    <TextBlock Text="{Binding DatabaseFile}" Foreground="#B9C3CF" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="Embedded Database Viewer" Foreground="#1D2733" FontSize="18" FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding DatabaseFile}" Foreground="#516071" FontSize="11" TextTrimming="CharacterEllipsis"/>
                 </StackPanel>
-                <TextBlock Grid.Column="1" Text="{Binding DatabaseStatus}" Foreground="#DDE6EE" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="1" Text="{Binding DatabaseStatus}" Foreground="#516071" VerticalAlignment="Center"/>
                 <TextBox Grid.Column="2" Width="220" PlaceholderText="Filter current table" Text="{Binding Keyword}"/>
                 <Button Grid.Column="3" Command="{Binding RefreshCommand}" Content="Refresh" MinWidth="84"/>
                 <Button Grid.Column="4" Command="{Binding ExportCsvCommand}" Content="CSV" MinWidth="64"/>
-                <TextBlock Grid.Column="5" Text="{Binding PageInfo}" Foreground="#DDE6EE" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="5" Text="{Binding PageInfo}" Foreground="#516071" VerticalAlignment="Center"/>
             </Grid>
         </Border>
 

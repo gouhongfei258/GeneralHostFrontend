@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Channels;
 using GeneralHostFrontend.Core.Settings;
 
@@ -9,11 +10,13 @@ public sealed class JsonSettingsStore<TSettings> : ISettingsStore<TSettings>
 {
     private readonly string _filePath;
     private readonly ISettingsValidator<TSettings> _validator;
-    private readonly Channel<TSettings> _changes = Channel.CreateUnbounded<TSettings>();
+    private readonly object _sync = new();
+    private readonly List<Channel<TSettings>> _watchers = new();
     private readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web)
     {
         WriteIndented = true,
-        IgnoreReadOnlyProperties = true
+        IgnoreReadOnlyProperties = true,
+        Converters = { new JsonStringEnumConverter() }
     };
 
     public JsonSettingsStore(string filePath, ISettingsValidator<TSettings> validator)
@@ -37,10 +40,11 @@ public sealed class JsonSettingsStore<TSettings> : ISettingsStore<TSettings>
         }
 
         var json = File.ReadAllText(_filePath);
-        Current = JsonSerializer.Deserialize<TSettings>(json, _jsonOptions)
+        var settings = JsonSerializer.Deserialize<TSettings>(json, _jsonOptions)
             ?? new TSettings();
 
-        return Current;
+        SetCurrent(settings, publish: false);
+        return settings;
     }
 
     public async Task SaveAsync(TSettings settings, CancellationToken cancellationToken = default)
@@ -63,17 +67,52 @@ public sealed class JsonSettingsStore<TSettings> : ISettingsStore<TSettings>
 
         var json = JsonSerializer.Serialize(settings, _jsonOptions);
         File.WriteAllText(_filePath, json);
-        Current = settings;
-        _changes.Writer.TryWrite(settings);
+        SetCurrent(settings, publish: true);
     }
 
     public async IAsyncEnumerable<TSettings> WatchAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        yield return Current;
+        var channel = Channel.CreateUnbounded<TSettings>();
+        TSettings current;
 
-        await foreach (var settings in _changes.Reader.ReadAllAsync(cancellationToken))
+        lock (_sync)
         {
-            yield return settings;
+            current = Current;
+            _watchers.Add(channel);
+        }
+
+        try
+        {
+            yield return current;
+
+            await foreach (var settings in channel.Reader.ReadAllAsync(cancellationToken))
+            {
+                yield return settings;
+            }
+        }
+        finally
+        {
+            lock (_sync)
+            {
+                _watchers.Remove(channel);
+            }
+
+            channel.Writer.TryComplete();
+        }
+    }
+
+    private void SetCurrent(TSettings settings, bool publish)
+    {
+        Channel<TSettings>[] watchers;
+        lock (_sync)
+        {
+            Current = settings;
+            watchers = publish ? _watchers.ToArray() : Array.Empty<Channel<TSettings>>();
+        }
+
+        foreach (var watcher in watchers)
+        {
+            watcher.Writer.TryWrite(settings);
         }
     }
 }

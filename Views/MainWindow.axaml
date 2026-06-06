@@ -20,11 +20,11 @@
     </Design.DataContext>
 
     <Grid RowDefinitions="Auto,*" Background="#F4F6F8">
-        <Border Grid.Row="0" Background="#18202A" Padding="18,12">
+        <Border Grid.Row="0" Background="White" BorderBrush="#DAE0E6" BorderThickness="0,0,0,1" Padding="18,12">
             <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="12">
                 <StackPanel>
-                    <TextBlock Text="General Host Framework" Foreground="White" FontSize="20" FontWeight="SemiBold"/>
-                    <TextBlock Text="Avalonia industrial host client shell" Foreground="#B9C3CF" FontSize="12"/>
+                    <TextBlock Text="General Host Framework" Foreground="#1D2733" FontSize="20" FontWeight="SemiBold"/>
+                    <TextBlock Text="Avalonia industrial host client shell" Foreground="#516071" FontSize="12"/>
                 </StackPanel>
 
                 <ComboBox Grid.Column="1"
@@ -65,15 +65,17 @@
                                 Command="{Binding StartCommand}"
                                 Content="Start"
                                 MinHeight="42"
-                                Background="#0B6B5B"
-                                Foreground="White"
+                                Background="#DDEFE9"
+                                Foreground="#163B33"
+                                BorderBrush="#9CCABE"
                                 FontWeight="SemiBold"/>
                         <Button Grid.Column="1"
                                 Command="{Binding StopCommand}"
                                 Content="Stop"
                                 MinHeight="42"
-                                Background="#8A2D3B"
-                                Foreground="White"
+                                Background="#F4E2E6"
+                                Foreground="#56202A"
+                                BorderBrush="#D4A8B1"
                                 FontWeight="SemiBold"/>
                     </Grid>
 
@@ -81,6 +83,14 @@
                     <TextBlock Text="Hot reload and validation ports are ready." TextWrapping="Wrap" Foreground="#516071"/>
 
                     <TextBlock Text="Tools" FontSize="15" FontWeight="SemiBold" Foreground="#1D2733"/>
+                    <Button Command="{Binding OpenLogicEditorCommand}"
+                            Content="Open Logic"
+                            MinHeight="40"
+                            FontWeight="SemiBold"/>
+                    <Button Command="{Binding OpenDeviceEditorCommand}"
+                            Content="Open Devices"
+                            MinHeight="40"
+                            FontWeight="SemiBold"/>
                     <Button Command="{Binding OpenTagEditorCommand}"
                             Content="Open Tags"
                             MinHeight="40"
