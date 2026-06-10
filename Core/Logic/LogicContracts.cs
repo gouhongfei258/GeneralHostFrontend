@@ -99,7 +99,8 @@ public sealed record LogicGraphDocument(
 public sealed record LogicBuildResult(
     string Code,
     bool IsValid,
-    IReadOnlyList<string> Diagnostics);
+    IReadOnlyList<string> Diagnostics,
+    ICompiledHostLogic? CompiledLogic = null);
 
 public interface ILogicGraphStore
 {
@@ -116,6 +117,13 @@ public interface ILogicCodeGenerator
 public interface IGeneratedHostLogic
 {
     Task ExecuteAsync(IHostLogicContext context, CancellationToken cancellationToken);
+}
+
+public interface ICompiledHostLogic : IAsyncDisposable
+{
+    string AssemblyName { get; }
+
+    IGeneratedHostLogic Instance { get; }
 }
 
 public interface IHostLogicContext
@@ -140,6 +148,8 @@ public interface ILogicCompiler
 
 public static class LogicNodeTemplate
 {
+    public const int DefaultSwitchCaseCount = 3;
+
     public static IReadOnlyList<LogicPlcStructDefinition> CreateDefaultPlcStructs()
         => new[]
         {
@@ -296,24 +306,13 @@ public static class LogicNodeTemplate
                 "Switch",
                 x,
                 y,
-                new Dictionary<string, string>
-                {
-                    ["case1"] = "Auto",
-                    ["case2"] = "Manual",
-                    ["case3"] = string.Empty
-                },
+                CreateSwitchProperties(),
                 new[]
                 {
                     new LogicConnectorDefinition("in", "In", LogicConnectorKind.Flow, LogicConnectorDirection.Input),
                     new LogicConnectorDefinition("value", "Value", LogicConnectorKind.Value, LogicConnectorDirection.Input, LogicValueType.Any)
                 },
-                new[]
-                {
-                    new LogicConnectorDefinition("case1", "Case 1", LogicConnectorKind.Flow, LogicConnectorDirection.Output),
-                    new LogicConnectorDefinition("case2", "Case 2", LogicConnectorKind.Flow, LogicConnectorDirection.Output),
-                    new LogicConnectorDefinition("case3", "Case 3", LogicConnectorKind.Flow, LogicConnectorDirection.Output),
-                    new LogicConnectorDefinition("default", "Default", LogicConnectorKind.Flow, LogicConnectorDirection.Output)
-                }),
+                CreateSwitchOutputs(CreateSwitchProperties())),
             LogicNodeKind.WriteTag => new LogicNodeDefinition(
                 id,
                 kind,
@@ -412,5 +411,55 @@ public static class LogicNodeTemplate
                 }),
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unsupported node kind.")
         };
+    }
+
+    private static IReadOnlyDictionary<string, string> CreateSwitchProperties()
+    {
+        var properties = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["case1"] = "string:Auto",
+            ["case2"] = "string:Manual"
+        };
+
+        for (var index = 3; index <= DefaultSwitchCaseCount; index++)
+        {
+            properties[$"case{index}"] = string.Empty;
+        }
+
+        return properties;
+    }
+
+    public static IReadOnlyList<LogicConnectorDefinition> CreateSwitchOutputs(IReadOnlyDictionary<string, string> properties)
+    {
+        var caseIndexes = properties.Keys
+            .Select(ParseSwitchCaseIndex)
+            .Where(index => index > 0)
+            .OrderBy(index => index)
+            .Distinct()
+            .ToArray();
+
+        var outputs = new List<LogicConnectorDefinition>(caseIndexes.Length + 1);
+        foreach (var index in caseIndexes)
+        {
+            outputs.Add(new LogicConnectorDefinition(
+                $"case{index}",
+                $"Case {index}",
+                LogicConnectorKind.Flow,
+                LogicConnectorDirection.Output));
+        }
+
+        outputs.Add(new LogicConnectorDefinition("default", "Default", LogicConnectorKind.Flow, LogicConnectorDirection.Output));
+        return outputs;
+    }
+
+    private static int ParseSwitchCaseIndex(string key)
+    {
+        if (!key.StartsWith("case", StringComparison.OrdinalIgnoreCase)
+            || !int.TryParse(key[4..], out var index))
+        {
+            return 0;
+        }
+
+        return index;
     }
 }

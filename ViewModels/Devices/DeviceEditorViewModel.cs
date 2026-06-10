@@ -42,29 +42,189 @@ public sealed partial class DeviceEditorViewModel : ViewModelBase
     {
         DriverKind.Simulator,
         DriverKind.ModbusTcp,
+        DriverKind.ModbusUdp,
         DriverKind.ModbusRtu,
         DriverKind.SiemensS7,
-        DriverKind.OmronFins
+        DriverKind.SiemensFetchWrite,
+        DriverKind.SiemensPpiOverTcp,
+        DriverKind.OmronFins,
+        DriverKind.OmronFinsUdp,
+        DriverKind.OmronHostLinkOverTcp,
+        DriverKind.OmronHostLinkCModeOverTcp,
+        DriverKind.OmronCip,
+        DriverKind.OmronConnectedCip,
+        DriverKind.MelsecMc,
+        DriverKind.MelsecMcUdp,
+        DriverKind.MelsecMcAscii,
+        DriverKind.MelsecMcAsciiUdp,
+        DriverKind.MelsecMcR,
+        DriverKind.MelsecA1E,
+        DriverKind.MelsecA1EAscii,
+        DriverKind.MelsecA3COverTcp,
+        DriverKind.MelsecFxLinksOverTcp,
+        DriverKind.MelsecFxSerialOverTcp,
+        DriverKind.MelsecCip,
+        DriverKind.KeyenceMc,
+        DriverKind.KeyenceMcAscii,
+        DriverKind.KeyenceNanoOverTcp,
+        DriverKind.PanasonicMc,
+        DriverKind.PanasonicMewtocolOverTcp,
+        DriverKind.AllenBradleyCip,
+        DriverKind.AllenBradleyConnectedCip,
+        DriverKind.AllenBradleyPccc,
+        DriverKind.AllenBradleySlc,
+        DriverKind.BeckhoffAds,
+        DriverKind.DeltaTcp,
+        DriverKind.DeltaSerialOverTcp,
+        DriverKind.DeltaSerialAsciiOverTcp,
+        DriverKind.FatekProgramOverTcp,
+        DriverKind.InovanceTcp,
+        DriverKind.InovanceSerialOverTcp,
+        DriverKind.InovanceEasy,
+        DriverKind.InovanceConnectedCip,
+        DriverKind.FujiSph,
+        DriverKind.FujiSpbOverTcp,
+        DriverKind.GeSrtp,
+        DriverKind.LsFastEnet,
+        DriverKind.LsCnetOverTcp,
+        DriverKind.XinJeTcp,
+        DriverKind.XinJeInternal,
+        DriverKind.XinJeSerialOverTcp,
+        DriverKind.YaskawaMemobusTcp,
+        DriverKind.YaskawaMemobusUdp,
+        DriverKind.MegMeetTcp,
+        DriverKind.MegMeetSerialOverTcp,
+        DriverKind.Http,
+        DriverKind.TcpServer,
+        DriverKind.TcpClient
     };
 
     public string ParameterHint
         => SelectedDevice?.Kind switch
         {
             DriverKind.ModbusTcp => "station=1, dataFormat=ABCD, addressStartWithZero=true",
+            DriverKind.ModbusUdp => "station=1, dataFormat=ABCD, addressStartWithZero=true",
             DriverKind.ModbusRtu => "station=1, baudRate=9600, dataBits=8, parity=None, stopBits=One",
-            DriverKind.SiemensS7 => "plcType=S1200, rack=0, slot=1",
-            DriverKind.OmronFins => "plcType=CSCJ, da1=10, sa1=20",
+            DriverKind.SiemensS7 => "plcType=S1200, rack=0, slot=1, connectionType=1",
+            DriverKind.SiemensFetchWrite => "No extra driver parameters. Configure PLC address and tag addresses.",
+            DriverKind.SiemensPpiOverTcp => "station=2",
+            DriverKind.OmronFins or DriverKind.OmronFinsUdp => "plcType=CSCJ, da1=10, sa1=20, readSplits=500",
+            DriverKind.OmronHostLinkOverTcp => "plcType=CSCJ, unitNumber=0, da2=0, sa2=0, responseWaitTime=0",
+            DriverKind.OmronHostLinkCModeOverTcp => "unitNumber=0",
+            DriverKind.OmronCip => "No extra driver parameters. CIP tag names are used as addresses.",
+            DriverKind.OmronConnectedCip => "connectionTimeoutMultiplier=1",
+            DriverKind.AllenBradleyCip
+                or DriverKind.AllenBradleyPccc
+                or DriverKind.AllenBradleySlc
+                or DriverKind.MelsecCip
+                or DriverKind.InovanceConnectedCip => "No extra driver parameters. CIP/PCCC tag names are used as addresses.",
+            DriverKind.AllenBradleyConnectedCip => "No extra driver parameters. Connected CIP tag names are used as addresses.",
+            DriverKind.MelsecMc
+                or DriverKind.MelsecMcUdp
+                or DriverKind.MelsecMcAscii
+                or DriverKind.MelsecMcAsciiUdp
+                or DriverKind.MelsecMcR => "networkNumber=0, networkStationNumber=0, plcNumber=255, targetIOStation=1023",
+            DriverKind.MelsecA1E
+                or DriverKind.MelsecA1EAscii => "plcNumber=0",
+            DriverKind.MelsecA3COverTcp => "station=0, format=1, sumCheck=true",
+            DriverKind.MelsecFxLinksOverTcp => "station=0, format=1, sumCheck=true, waittingTime=0",
+            DriverKind.MelsecFxSerialOverTcp => "isNewVersion=true, useGot=false",
+            DriverKind.KeyenceMc
+                or DriverKind.KeyenceMcAscii
+                or DriverKind.PanasonicMc => "No extra driver parameters. MC protocol addresses such as D100, M100.",
+            DriverKind.KeyenceNanoOverTcp => "station=0, useStation=false",
+            DriverKind.PanasonicMewtocolOverTcp => "station=238",
+            DriverKind.DeltaTcp
+                or DriverKind.DeltaSerialOverTcp
+                or DriverKind.DeltaSerialAsciiOverTcp => "station=1, series=Dvp, dataFormat=ABCD, addressStartWithZero=true",
+            DriverKind.InovanceTcp
+                or DriverKind.InovanceSerialOverTcp => "station=1, series=AM, dataFormat=ABCD, addressStartWithZero=true",
+            DriverKind.XinJeTcp
+                or DriverKind.XinJeSerialOverTcp
+                or DriverKind.MegMeetTcp
+                or DriverKind.MegMeetSerialOverTcp => "station=1, dataFormat=ABCD, addressStartWithZero=true",
+            DriverKind.XinJeInternal => "station=1, dataFormat=ABCD, isStringReverse=false",
+            DriverKind.BeckhoffAds => "amsPort=851, useAutoAmsNetId=true, useTagCache=true",
+            DriverKind.FatekProgramOverTcp => "No extra driver parameters. Use addresses supported by the selected HSL driver.",
+            DriverKind.FujiSph => "connectionId=0",
+            DriverKind.FujiSpbOverTcp => "station=1",
+            DriverKind.LsFastEnet => "companyId=LSIS-XGT, baseNo=0, slotNo=0",
+            DriverKind.LsCnetOverTcp => "station=0",
+            DriverKind.YaskawaMemobusTcp or DriverKind.YaskawaMemobusUdp => "cpuFrom=2, cpuTo=1",
+            DriverKind.GeSrtp => "No extra driver parameters. Use addresses supported by the selected HSL driver.",
+            DriverKind.Http => "readMethod=GET, writeMethod=POST, heartbeatPath=/health",
+            DriverKind.TcpClient => "encoding=utf-8, terminator=\\n, responseTerminator=\\n",
+            DriverKind.TcpServer => "encoding=utf-8, terminator=\\n, writeTerminator=\\n",
             DriverKind.Simulator => "No parameters required.",
-            _ => "Only Simulator, Modbus TCP/RTU, Siemens S7 and Omron FINS are active."
+            _ => "The selected protocol is not active."
         };
 
     public bool IsTcpEndpoint
-        => SelectedDevice?.Kind is DriverKind.ModbusTcp or DriverKind.SiemensS7 or DriverKind.OmronFins;
+        => SelectedDevice?.Kind is DriverKind.ModbusTcp
+            or DriverKind.ModbusUdp
+            or DriverKind.SiemensS7
+            or DriverKind.SiemensFetchWrite
+            or DriverKind.SiemensPpiOverTcp
+            or DriverKind.OmronFins
+            or DriverKind.OmronFinsUdp
+            or DriverKind.OmronHostLinkOverTcp
+            or DriverKind.OmronHostLinkCModeOverTcp
+            or DriverKind.OmronCip
+            or DriverKind.OmronConnectedCip
+            or DriverKind.MelsecMc
+            or DriverKind.MelsecMcUdp
+            or DriverKind.MelsecMcAscii
+            or DriverKind.MelsecMcAsciiUdp
+            or DriverKind.MelsecMcR
+            or DriverKind.MelsecA1E
+            or DriverKind.MelsecA1EAscii
+            or DriverKind.MelsecA3COverTcp
+            or DriverKind.MelsecFxLinksOverTcp
+            or DriverKind.MelsecFxSerialOverTcp
+            or DriverKind.MelsecCip
+            or DriverKind.KeyenceMc
+            or DriverKind.KeyenceMcAscii
+            or DriverKind.KeyenceNanoOverTcp
+            or DriverKind.PanasonicMc
+            or DriverKind.PanasonicMewtocolOverTcp
+            or DriverKind.AllenBradleyCip
+            or DriverKind.AllenBradleyConnectedCip
+            or DriverKind.AllenBradleyPccc
+            or DriverKind.AllenBradleySlc
+            or DriverKind.BeckhoffAds
+            or DriverKind.DeltaTcp
+            or DriverKind.DeltaSerialOverTcp
+            or DriverKind.DeltaSerialAsciiOverTcp
+            or DriverKind.FatekProgramOverTcp
+            or DriverKind.InovanceTcp
+            or DriverKind.InovanceSerialOverTcp
+            or DriverKind.InovanceEasy
+            or DriverKind.InovanceConnectedCip
+            or DriverKind.FujiSph
+            or DriverKind.FujiSpbOverTcp
+            or DriverKind.GeSrtp
+            or DriverKind.LsFastEnet
+            or DriverKind.LsCnetOverTcp
+            or DriverKind.XinJeTcp
+            or DriverKind.XinJeInternal
+            or DriverKind.XinJeSerialOverTcp
+            or DriverKind.YaskawaMemobusTcp
+            or DriverKind.YaskawaMemobusUdp
+            or DriverKind.MegMeetTcp
+            or DriverKind.MegMeetSerialOverTcp
+            or DriverKind.Http
+            or DriverKind.TcpServer
+            or DriverKind.TcpClient;
 
     public string AddressLabel
-        => SelectedDevice?.Kind is DriverKind.ModbusRtu
-            ? "Serial Port"
-            : "IP / Address";
+        => SelectedDevice?.Kind switch
+        {
+            DriverKind.ModbusRtu => "Serial Port",
+            DriverKind.Http => "Base URL",
+            DriverKind.TcpServer => "Bind Address",
+            DriverKind.TcpClient => "Remote Address",
+            _ => "IP / Address"
+        };
 
     partial void OnSelectedDeviceChanged(EditableDeviceViewModel? oldValue, EditableDeviceViewModel? newValue)
     {

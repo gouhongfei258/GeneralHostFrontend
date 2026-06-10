@@ -110,6 +110,9 @@ public sealed class CSharpLogicCodeGenerator : ILogicCodeGenerator
                     }
 
                     break;
+                case LogicNodeKind.Switch:
+                    ValidateSwitchCases(diagnostics, node);
+                    break;
                 case LogicNodeKind.WriteTag:
                     RequireProperty(diagnostics, node, "tagName");
                     break;
@@ -132,6 +135,24 @@ public sealed class CSharpLogicCodeGenerator : ILogicCodeGenerator
         }
 
         return diagnostics;
+    }
+
+    private static void ValidateSwitchCases(ICollection<string> diagnostics, LogicNodeDefinition node)
+    {
+        foreach (var connectorId in GetSwitchCaseConnectorIds(node))
+        {
+            var value = GetProperty(node, connectorId);
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                continue;
+            }
+
+            var validationError = ValidateSwitchCaseRule(value);
+            if (validationError is not null)
+            {
+                diagnostics.Add($"Switch node '{node.Title}' {connectorId} {validationError}");
+            }
+        }
     }
 
     private static string BuildCode(LogicGraphDocument document)
@@ -320,26 +341,35 @@ public sealed class CSharpLogicCodeGenerator : ILogicCodeGenerator
         int indentLevel,
         HashSet<string> path)
     {
-        AppendLine(builder, indentLevel, "switch (Convert.ToString(currentValue, System.Globalization.CultureInfo.InvariantCulture))");
-        AppendLine(builder, indentLevel, "{");
-        for (var index = 1; index <= 3; index++)
+        AppendLine(builder, indentLevel, "var switchValue = currentValue;");
+        var hasCondition = false;
+        foreach (var connectorId in GetSwitchCaseConnectorIds(node))
         {
-            var connectorId = $"case{index.ToString(CultureInfo.InvariantCulture)}";
-            var caseValue = GetProperty(node, connectorId);
-            if (string.IsNullOrWhiteSpace(caseValue))
+            var rule = ParseSwitchCaseRule(GetProperty(node, connectorId));
+            if (rule is null)
             {
                 continue;
             }
 
-            AppendLine(builder, indentLevel + 1, $"case {Quote(caseValue)}:");
-            AppendTargets(builder, node, connectorId, outgoing, nodes, indentLevel + 2, path);
-            AppendLine(builder, indentLevel + 2, "break;");
+            AppendLine(builder, indentLevel, hasCondition ? $"else if ({rule.Condition})" : $"if ({rule.Condition})");
+            AppendLine(builder, indentLevel, "{");
+            AppendTargets(builder, node, connectorId, outgoing, nodes, indentLevel + 1, path);
+            AppendLine(builder, indentLevel, "}");
+            hasCondition = true;
         }
 
-        AppendLine(builder, indentLevel + 1, "default:");
-        AppendTargets(builder, node, "default", outgoing, nodes, indentLevel + 2, path);
-        AppendLine(builder, indentLevel + 2, "break;");
-        AppendLine(builder, indentLevel, "}");
+        var defaultTargets = GetTargets(node, "default", outgoing, nodes).ToArray();
+        if (defaultTargets.Length > 0)
+        {
+            AppendLine(builder, indentLevel, hasCondition ? "else" : "if (true)");
+            AppendLine(builder, indentLevel, "{");
+            foreach (var next in defaultTargets)
+            {
+                AppendNode(builder, next, outgoing, nodes, indentLevel + 1, new HashSet<string>(path, StringComparer.OrdinalIgnoreCase));
+            }
+
+            AppendLine(builder, indentLevel, "}");
+        }
     }
 
     private static void AppendTargets(
@@ -379,6 +409,16 @@ public sealed class CSharpLogicCodeGenerator : ILogicCodeGenerator
 
     private static bool IsTrigger(LogicNodeDefinition node)
         => node.Kind is LogicNodeKind.Timer or LogicNodeKind.OnTagChanged;
+
+    private static IReadOnlyList<string> GetSwitchCaseConnectorIds(LogicNodeDefinition node)
+        => node.Outputs
+            .Where(output =>
+                output.Kind is LogicConnectorKind.Flow
+                && output.Id.StartsWith("case", StringComparison.OrdinalIgnoreCase)
+                && int.TryParse(output.Id[4..], NumberStyles.Integer, CultureInfo.InvariantCulture, out _))
+            .OrderBy(output => int.Parse(output.Id[4..], CultureInfo.InvariantCulture))
+            .Select(output => output.Id)
+            .ToArray();
 
     private static string ResolveNodeValue(LogicNodeDefinition node)
     {
@@ -436,6 +476,81 @@ public sealed class CSharpLogicCodeGenerator : ILogicCodeGenerator
 
     private static string Quote(string value)
         => SymbolDisplay.FormatLiteral(value, quote: true);
+
+    private static SwitchCaseRule? ParseSwitchCaseRule(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        var separator = value.IndexOf(':', StringComparison.Ordinal);
+        var kind = separator > 0 ? value[..separator].Trim() : "string";
+        var body = separator > 0 ? value[(separator + 1)..].Trim() : value.Trim();
+
+        if (string.IsNullOrWhiteSpace(body))
+        {
+            return null;
+        }
+
+        return kind.ToLowerInvariant() switch
+        {
+            "string" or "enum" => new SwitchCaseRule(
+                $"string.Equals(Convert.ToString(switchValue, System.Globalization.CultureInfo.InvariantCulture), {Quote(body)}, StringComparison.OrdinalIgnoreCase)"),
+            "number" or "num" => double.TryParse(body, NumberStyles.Float, CultureInfo.InvariantCulture, out var number)
+                ? new SwitchCaseRule(
+                    "switchValue is IConvertible "
+                    + $"&& Math.Abs(Convert.ToDouble(switchValue, System.Globalization.CultureInfo.InvariantCulture) - {number.ToString(CultureInfo.InvariantCulture)}) < 0.000001")
+                : null,
+            "bool" or "boolean" => bool.TryParse(body, out var boolValue)
+                ? new SwitchCaseRule($"Equals(switchValue, {(boolValue ? "true" : "false")})")
+                : null,
+            "expr" or "expression" => new SwitchCaseRule(NormalizeSwitchExpression(body)),
+            _ => new SwitchCaseRule(
+                $"string.Equals(Convert.ToString(switchValue, System.Globalization.CultureInfo.InvariantCulture), {Quote(value)}, StringComparison.OrdinalIgnoreCase)")
+        };
+    }
+
+    private static string? ValidateSwitchCaseRule(string value)
+    {
+        var separator = value.IndexOf(':', StringComparison.Ordinal);
+        if (separator < 0)
+        {
+            return null;
+        }
+
+        var kind = value[..separator].Trim();
+        var body = value[(separator + 1)..].Trim();
+        if (string.IsNullOrWhiteSpace(body))
+        {
+            return "requires a value after the case type prefix.";
+        }
+
+        return kind.ToLowerInvariant() switch
+        {
+            "string" or "enum" => null,
+            "number" or "num" => double.TryParse(body, NumberStyles.Float, CultureInfo.InvariantCulture, out _)
+                ? null
+                : "requires a numeric value for number case.",
+            "bool" or "boolean" => bool.TryParse(body, out _)
+                ? null
+                : "requires true or false for bool case.",
+            "expr" or "expression" => string.IsNullOrWhiteSpace(NormalizeSwitchExpression(body))
+                ? "requires a boolean expression."
+                : null,
+            _ => "has an unknown case type prefix. Use string, number, bool, enum or expr."
+        };
+    }
+
+    private static string NormalizeSwitchExpression(string expression)
+    {
+        var normalized = NormalizeExpression(expression);
+        return string.IsNullOrWhiteSpace(normalized)
+            ? "false"
+            : normalized;
+    }
+
+    private sealed record SwitchCaseRule(string Condition);
 
     private static string EscapeInterpolated(string value)
         => value

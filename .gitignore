@@ -12,6 +12,7 @@ obj/
 *.sln.docstates
 
 # Runtime-generated app data
+.codegraph/
 Config/
 Data/
 Logs/

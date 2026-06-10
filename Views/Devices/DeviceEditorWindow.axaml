@@ -124,7 +124,7 @@
                                  FontFamily="Consolas, Menlo, monospace"/>
 
                         <Border Grid.Row="6" Grid.ColumnSpan="2" Background="#EEF3F7" CornerRadius="6" Padding="12">
-                            <TextBlock Text="Use one key=value pair per line. Address is an IP for TCP PLCs, a serial port name for Modbus RTU, or sim://... for Simulator."
+                            <TextBlock Text="Use one key=value pair per line. Address is an IP/URL for network protocols, a serial port name for Modbus RTU, or sim://... for Simulator."
                                        Foreground="#516071"
                                        TextWrapping="Wrap"/>
                         </Border>

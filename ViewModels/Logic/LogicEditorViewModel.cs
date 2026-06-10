@@ -262,6 +262,11 @@ public sealed partial class LogicEditorViewModel : NodifyEditorViewModelBase
         }
 
         var result = await _compiler.CompileAsync(GeneratedCode);
+        if (result.CompiledLogic is not null)
+        {
+            await result.CompiledLogic.DisposeAsync();
+        }
+
         Diagnostics = result.Diagnostics.Count == 0
             ? "Compile succeeded."
             : string.Join(Environment.NewLine, result.Diagnostics);

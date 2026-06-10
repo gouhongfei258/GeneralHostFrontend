@@ -56,9 +56,61 @@ public sealed class HostSettingsValidator : ISettingsValidator<HostSettings>
             if (device.Kind is not (
                 Core.Communication.DriverKind.Simulator
                 or Core.Communication.DriverKind.ModbusTcp
+                or Core.Communication.DriverKind.ModbusUdp
                 or Core.Communication.DriverKind.ModbusRtu
                 or Core.Communication.DriverKind.SiemensS7
-                or Core.Communication.DriverKind.OmronFins))
+                or Core.Communication.DriverKind.SiemensFetchWrite
+                or Core.Communication.DriverKind.OmronFins
+                or Core.Communication.DriverKind.OmronFinsUdp
+                or Core.Communication.DriverKind.OmronHostLinkOverTcp
+                or Core.Communication.DriverKind.OmronHostLinkCModeOverTcp
+                or Core.Communication.DriverKind.OmronCip
+                or Core.Communication.DriverKind.OmronConnectedCip
+                or Core.Communication.DriverKind.MelsecMc
+                or Core.Communication.DriverKind.MelsecMcUdp
+                or Core.Communication.DriverKind.MelsecMcAscii
+                or Core.Communication.DriverKind.MelsecMcAsciiUdp
+                or Core.Communication.DriverKind.MelsecMcR
+                or Core.Communication.DriverKind.MelsecA1E
+                or Core.Communication.DriverKind.MelsecA1EAscii
+                or Core.Communication.DriverKind.MelsecA3COverTcp
+                or Core.Communication.DriverKind.MelsecFxLinksOverTcp
+                or Core.Communication.DriverKind.MelsecFxSerialOverTcp
+                or Core.Communication.DriverKind.MelsecCip
+                or Core.Communication.DriverKind.KeyenceMc
+                or Core.Communication.DriverKind.KeyenceMcAscii
+                or Core.Communication.DriverKind.KeyenceNanoOverTcp
+                or Core.Communication.DriverKind.PanasonicMc
+                or Core.Communication.DriverKind.PanasonicMewtocolOverTcp
+                or Core.Communication.DriverKind.AllenBradleyCip
+                or Core.Communication.DriverKind.AllenBradleyConnectedCip
+                or Core.Communication.DriverKind.AllenBradleyPccc
+                or Core.Communication.DriverKind.AllenBradleySlc
+                or Core.Communication.DriverKind.BeckhoffAds
+                or Core.Communication.DriverKind.DeltaTcp
+                or Core.Communication.DriverKind.DeltaSerialOverTcp
+                or Core.Communication.DriverKind.DeltaSerialAsciiOverTcp
+                or Core.Communication.DriverKind.FatekProgramOverTcp
+                or Core.Communication.DriverKind.InovanceTcp
+                or Core.Communication.DriverKind.InovanceSerialOverTcp
+                or Core.Communication.DriverKind.InovanceEasy
+                or Core.Communication.DriverKind.InovanceConnectedCip
+                or Core.Communication.DriverKind.FujiSph
+                or Core.Communication.DriverKind.FujiSpbOverTcp
+                or Core.Communication.DriverKind.GeSrtp
+                or Core.Communication.DriverKind.LsFastEnet
+                or Core.Communication.DriverKind.LsCnetOverTcp
+                or Core.Communication.DriverKind.XinJeTcp
+                or Core.Communication.DriverKind.XinJeInternal
+                or Core.Communication.DriverKind.XinJeSerialOverTcp
+                or Core.Communication.DriverKind.YaskawaMemobusTcp
+                or Core.Communication.DriverKind.YaskawaMemobusUdp
+                or Core.Communication.DriverKind.MegMeetTcp
+                or Core.Communication.DriverKind.MegMeetSerialOverTcp
+                or Core.Communication.DriverKind.SiemensPpiOverTcp
+                or Core.Communication.DriverKind.Http
+                or Core.Communication.DriverKind.TcpServer
+                or Core.Communication.DriverKind.TcpClient))
             {
                 messages.Add(new ValidationMessage(device.DeviceId, $"Driver '{device.Kind}' is not implemented yet."));
             }

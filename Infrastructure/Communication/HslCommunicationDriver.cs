@@ -341,9 +341,58 @@ public static class HslCommunicationDriverFactory
         return endpoint.Kind switch
         {
             DriverKind.ModbusTcp => CreateModbusTcp(endpoint, options),
+            DriverKind.ModbusUdp => CreateModbusUdp(endpoint, options),
             DriverKind.ModbusRtu => CreateModbusRtu(endpoint, options),
             DriverKind.SiemensS7 => CreateSiemensS7(endpoint, options),
+            DriverKind.SiemensFetchWrite => CreateSiemensFetchWrite(endpoint, options),
+            DriverKind.SiemensPpiOverTcp => CreateSiemensPpiOverTcp(endpoint, options),
             DriverKind.OmronFins => CreateOmronFins(endpoint, options),
+            DriverKind.OmronFinsUdp => CreateOmronFinsUdp(endpoint, options),
+            DriverKind.OmronHostLinkOverTcp => CreateOmronHostLinkOverTcp(endpoint, options),
+            DriverKind.OmronHostLinkCModeOverTcp => CreateOmronHostLinkCModeOverTcp(endpoint, options),
+            DriverKind.OmronCip => CreateOmronCip(endpoint, options),
+            DriverKind.OmronConnectedCip => CreateOmronConnectedCip(endpoint, options),
+            DriverKind.MelsecMc => CreateMelsecMc(endpoint, options),
+            DriverKind.MelsecMcUdp => CreateMelsecMcUdp(endpoint, options),
+            DriverKind.MelsecMcAscii => CreateMelsecMcAscii(endpoint, options),
+            DriverKind.MelsecMcAsciiUdp => CreateMelsecMcAsciiUdp(endpoint, options),
+            DriverKind.MelsecMcR => CreateMelsecMcR(endpoint, options),
+            DriverKind.MelsecA1E => CreateMelsecA1E(endpoint, options),
+            DriverKind.MelsecA1EAscii => CreateMelsecA1EAscii(endpoint, options),
+            DriverKind.MelsecA3COverTcp => CreateMelsecA3COverTcp(endpoint, options),
+            DriverKind.MelsecFxLinksOverTcp => CreateMelsecFxLinksOverTcp(endpoint, options),
+            DriverKind.MelsecFxSerialOverTcp => CreateMelsecFxSerialOverTcp(endpoint, options),
+            DriverKind.MelsecCip => CreateMelsecCip(endpoint, options),
+            DriverKind.KeyenceMc => CreateKeyenceMc(endpoint, options),
+            DriverKind.KeyenceMcAscii => CreateKeyenceMcAscii(endpoint, options),
+            DriverKind.KeyenceNanoOverTcp => CreateKeyenceNanoOverTcp(endpoint, options),
+            DriverKind.PanasonicMc => CreatePanasonicMc(endpoint, options),
+            DriverKind.PanasonicMewtocolOverTcp => CreatePanasonicMewtocolOverTcp(endpoint, options),
+            DriverKind.AllenBradleyCip => CreateAllenBradleyCip(endpoint, options),
+            DriverKind.AllenBradleyConnectedCip => CreateAllenBradleyConnectedCip(endpoint, options),
+            DriverKind.AllenBradleyPccc => CreateAllenBradleyPccc(endpoint, options),
+            DriverKind.AllenBradleySlc => CreateAllenBradleySlc(endpoint, options),
+            DriverKind.BeckhoffAds => CreateBeckhoffAds(endpoint, options),
+            DriverKind.DeltaTcp => CreateDeltaTcp(endpoint, options),
+            DriverKind.DeltaSerialOverTcp => CreateDeltaSerialOverTcp(endpoint, options),
+            DriverKind.DeltaSerialAsciiOverTcp => CreateDeltaSerialAsciiOverTcp(endpoint, options),
+            DriverKind.FatekProgramOverTcp => CreateFatekProgramOverTcp(endpoint, options),
+            DriverKind.InovanceTcp => CreateInovanceTcp(endpoint, options),
+            DriverKind.InovanceSerialOverTcp => CreateInovanceSerialOverTcp(endpoint, options),
+            DriverKind.InovanceEasy => CreateInovanceEasy(endpoint, options),
+            DriverKind.InovanceConnectedCip => CreateInovanceConnectedCip(endpoint, options),
+            DriverKind.FujiSph => CreateFujiSph(endpoint, options),
+            DriverKind.FujiSpbOverTcp => CreateFujiSpbOverTcp(endpoint, options),
+            DriverKind.GeSrtp => CreateGeSrtp(endpoint, options),
+            DriverKind.LsFastEnet => CreateLsFastEnet(endpoint, options),
+            DriverKind.LsCnetOverTcp => CreateLsCnetOverTcp(endpoint, options),
+            DriverKind.XinJeTcp => CreateXinJeTcp(endpoint, options),
+            DriverKind.XinJeInternal => CreateXinJeInternal(endpoint, options),
+            DriverKind.XinJeSerialOverTcp => CreateXinJeSerialOverTcp(endpoint, options),
+            DriverKind.YaskawaMemobusTcp => CreateYaskawaMemobusTcp(endpoint, options),
+            DriverKind.YaskawaMemobusUdp => CreateYaskawaMemobusUdp(endpoint, options),
+            DriverKind.MegMeetTcp => CreateMegMeetTcp(endpoint, options),
+            DriverKind.MegMeetSerialOverTcp => CreateMegMeetSerialOverTcp(endpoint, options),
             _ => throw new NotSupportedException($"Driver '{endpoint.Kind}' is not supported by the HSL adapter.")
         };
     }
@@ -362,6 +411,21 @@ public static class HslCommunicationDriverFactory
             cancellationToken => ConnectTcpAsync(client, cancellationToken),
             cancellationToken => DisconnectTcpAsync(client, cancellationToken),
             client.Dispose);
+    }
+
+    private static ICommunicationDriver CreateModbusUdp(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var station = GetByte(endpoint, "station", 1);
+        var client = new HslCommunication.ModBus.ModbusUdpNet(endpoint.Address, GetPort(endpoint, 502), station);
+        ConfigureModbus(client, endpoint);
+
+        return new HslCommunicationDriver(
+            endpoint,
+            options,
+            client,
+            _ => Task.FromResult(new OperateResult { IsSuccess = true }),
+            _ => Task.FromResult(new OperateResult { IsSuccess = true }),
+            () => DisposeIfNeeded(client));
     }
 
     private static ICommunicationDriver CreateModbusRtu(CommunicationEndpoint endpoint, CommunicationOptions options)
@@ -422,6 +486,19 @@ public static class HslCommunicationDriverFactory
             client.Dispose);
     }
 
+    private static ICommunicationDriver CreateSiemensFetchWrite(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.Siemens.SiemensFetchWriteNet(endpoint.Address, GetPort(endpoint, 102));
+        return CreateTcpDriver(endpoint, options, client);
+    }
+
+    private static ICommunicationDriver CreateSiemensPpiOverTcp(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.Siemens.SiemensPPIOverTcp(endpoint.Address, GetPort(endpoint, 102));
+        client.Station = GetByte(endpoint, "station", client.Station);
+        return CreateTcpDriver(endpoint, options, client);
+    }
+
     private static ICommunicationDriver CreateOmronFins(CommunicationEndpoint endpoint, CommunicationOptions options)
     {
         var client = new HslCommunication.Profinet.Omron.OmronFinsNet(endpoint.Address, GetPort(endpoint, 9600));
@@ -449,6 +526,359 @@ public static class HslCommunicationDriverFactory
             client.Dispose);
     }
 
+    private static ICommunicationDriver CreateOmronFinsUdp(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.Omron.OmronFinsUdp(endpoint.Address, GetPort(endpoint, 9600));
+        client.PlcType = GetEnum(endpoint, "plcType", HslCommunication.Profinet.Omron.OmronPlcType.CSCJ);
+        client.ICF = GetByte(endpoint, "icf", client.ICF);
+        client.GCT = GetByte(endpoint, "gct", client.GCT);
+        client.DNA = GetByte(endpoint, "dna", client.DNA);
+        client.DA1 = GetByte(endpoint, "da1", client.DA1);
+        client.DA2 = GetByte(endpoint, "da2", client.DA2);
+        client.SNA = GetByte(endpoint, "sna", client.SNA);
+        client.SA1 = GetByte(endpoint, "sa1", client.SA1);
+        client.SA2 = GetByte(endpoint, "sa2", client.SA2);
+        client.SID = GetByte(endpoint, "sid", client.SID);
+        client.ReadSplits = GetInt(endpoint, "readSplits", client.ReadSplits);
+
+        return new HslCommunicationDriver(
+            endpoint,
+            options,
+            client,
+            _ => Task.FromResult(new OperateResult { IsSuccess = true }),
+            _ => Task.FromResult(new OperateResult { IsSuccess = true }),
+            () => DisposeIfNeeded(client));
+    }
+
+    private static ICommunicationDriver CreateOmronHostLinkOverTcp(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.Omron.OmronHostLinkOverTcp(endpoint.Address, GetPort(endpoint, 9600));
+        ConfigureOmronHostLink(client, endpoint);
+        return CreateTcpDriver(endpoint, options, client);
+    }
+
+    private static ICommunicationDriver CreateOmronHostLinkCModeOverTcp(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.Omron.OmronHostLinkCModeOverTcp(endpoint.Address, GetPort(endpoint, 9600));
+        client.UnitNumber = GetByte(endpoint, "unitNumber", client.UnitNumber);
+        return CreateTcpDriver(endpoint, options, client);
+    }
+
+    private static ICommunicationDriver CreateOmronCip(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.Omron.OmronCipNet(endpoint.Address, GetPort(endpoint, 44818));
+        return CreateTcpDriver(endpoint, options, client);
+    }
+
+    private static ICommunicationDriver CreateOmronConnectedCip(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.Omron.OmronConnectedCipNet(endpoint.Address, GetPort(endpoint, 44818));
+        client.ConnectionTimeoutMultiplier = GetByte(endpoint, "connectionTimeoutMultiplier", client.ConnectionTimeoutMultiplier);
+        return CreateTcpDriver(endpoint, options, client);
+    }
+
+    private static ICommunicationDriver CreateMelsecMc(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.Melsec.MelsecMcNet(endpoint.Address, GetPort(endpoint, 6000));
+        ConfigureMelsecMc(client, endpoint);
+        return CreateTcpDriver(endpoint, options, client);
+    }
+
+    private static ICommunicationDriver CreateMelsecMcUdp(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.Melsec.MelsecMcUdp(endpoint.Address, GetPort(endpoint, 6000));
+        ConfigureMelsecMc(client, endpoint);
+        return new HslCommunicationDriver(
+            endpoint,
+            options,
+            client,
+            _ => Task.FromResult(new OperateResult { IsSuccess = true }),
+            _ => Task.FromResult(new OperateResult { IsSuccess = true }),
+            () => DisposeIfNeeded(client));
+    }
+
+    private static ICommunicationDriver CreateMelsecMcAscii(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.Melsec.MelsecMcAsciiNet(endpoint.Address, GetPort(endpoint, 6000));
+        ConfigureMelsecMc(client, endpoint);
+        return CreateTcpDriver(endpoint, options, client);
+    }
+
+    private static ICommunicationDriver CreateMelsecMcAsciiUdp(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.Melsec.MelsecMcAsciiUdp(endpoint.Address, GetPort(endpoint, 6000));
+        ConfigureMelsecMc(client, endpoint);
+        return new HslCommunicationDriver(
+            endpoint,
+            options,
+            client,
+            _ => Task.FromResult(new OperateResult { IsSuccess = true }),
+            _ => Task.FromResult(new OperateResult { IsSuccess = true }),
+            () => DisposeIfNeeded(client));
+    }
+
+    private static ICommunicationDriver CreateMelsecMcR(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.Melsec.MelsecMcRNet(endpoint.Address, GetPort(endpoint, 6000));
+        ConfigureMelsecMc(client, endpoint);
+        return CreateTcpDriver(endpoint, options, client);
+    }
+
+    private static ICommunicationDriver CreateMelsecA1E(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.Melsec.MelsecA1ENet(endpoint.Address, GetPort(endpoint, 5000));
+        client.PLCNumber = GetByte(endpoint, "plcNumber", client.PLCNumber);
+        return CreateTcpDriver(endpoint, options, client);
+    }
+
+    private static ICommunicationDriver CreateMelsecA1EAscii(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.Melsec.MelsecA1EAsciiNet(endpoint.Address, GetPort(endpoint, 5000));
+        client.PLCNumber = GetByte(endpoint, "plcNumber", client.PLCNumber);
+        return CreateTcpDriver(endpoint, options, client);
+    }
+
+    private static ICommunicationDriver CreateMelsecA3COverTcp(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.Melsec.MelsecA3CNetOverTcp(endpoint.Address, GetPort(endpoint, 6000));
+        ConfigureMelsecA3C(client, endpoint);
+        return CreateTcpDriver(endpoint, options, client);
+    }
+
+    private static ICommunicationDriver CreateMelsecFxLinksOverTcp(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.Melsec.MelsecFxLinksOverTcp(endpoint.Address, GetPort(endpoint, 6000));
+        ConfigureMelsecFxLinks(client, endpoint);
+        return CreateTcpDriver(endpoint, options, client);
+    }
+
+    private static ICommunicationDriver CreateMelsecFxSerialOverTcp(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.Melsec.MelsecFxSerialOverTcp(endpoint.Address, GetPort(endpoint, 6000));
+        client.IsNewVersion = GetBool(endpoint, "isNewVersion", client.IsNewVersion);
+        client.UseGOT = GetBool(endpoint, "useGot", client.UseGOT);
+        return CreateTcpDriver(endpoint, options, client);
+    }
+
+    private static ICommunicationDriver CreateMelsecCip(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.Melsec.MelsecCipNet(endpoint.Address, GetPort(endpoint, 44818));
+        return CreateTcpDriver(endpoint, options, client);
+    }
+
+    private static ICommunicationDriver CreateKeyenceMc(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.Keyence.KeyenceMcNet(endpoint.Address, GetPort(endpoint, 5000));
+        return CreateTcpDriver(endpoint, options, client);
+    }
+
+    private static ICommunicationDriver CreateKeyenceMcAscii(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.Keyence.KeyenceMcAsciiNet(endpoint.Address, GetPort(endpoint, 5000));
+        return CreateTcpDriver(endpoint, options, client);
+    }
+
+    private static ICommunicationDriver CreateKeyenceNanoOverTcp(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.Keyence.KeyenceNanoSerialOverTcp(endpoint.Address, GetPort(endpoint, 8501));
+        client.Station = GetByte(endpoint, "station", client.Station);
+        client.UseStation = GetBool(endpoint, "useStation", client.UseStation);
+        return CreateTcpDriver(endpoint, options, client);
+    }
+
+    private static ICommunicationDriver CreatePanasonicMc(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.Panasonic.PanasonicMcNet(endpoint.Address, GetPort(endpoint, 6000));
+        return CreateTcpDriver(endpoint, options, client);
+    }
+
+    private static ICommunicationDriver CreatePanasonicMewtocolOverTcp(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.Panasonic.PanasonicMewtocolOverTcp(
+            endpoint.Address,
+            GetPort(endpoint, 9094),
+            GetByte(endpoint, "station", 238));
+        return CreateTcpDriver(endpoint, options, client);
+    }
+
+    private static ICommunicationDriver CreateAllenBradleyCip(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.AllenBradley.AllenBradleyNet(endpoint.Address, GetPort(endpoint, 44818));
+        ConfigureAllenBradley(client, endpoint);
+        return CreateTcpDriver(endpoint, options, client);
+    }
+
+    private static ICommunicationDriver CreateAllenBradleyConnectedCip(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.AllenBradley.AllenBradleyConnectedCipNet(endpoint.Address, GetPort(endpoint, 44818));
+        return CreateTcpDriver(endpoint, options, client);
+    }
+
+    private static ICommunicationDriver CreateAllenBradleyPccc(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.AllenBradley.AllenBradleyPcccNet(endpoint.Address, GetPort(endpoint, 44818));
+        return CreateTcpDriver(endpoint, options, client);
+    }
+
+    private static ICommunicationDriver CreateAllenBradleySlc(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.AllenBradley.AllenBradleySLCNet(endpoint.Address, GetPort(endpoint, 44818));
+        return CreateTcpDriver(endpoint, options, client);
+    }
+
+    private static ICommunicationDriver CreateBeckhoffAds(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.Beckhoff.BeckhoffAdsNet(endpoint.Address, GetPort(endpoint, 48898));
+        client.AmsPort = GetInt(endpoint, "amsPort", client.AmsPort);
+        client.UseAutoAmsNetID = GetBool(endpoint, "useAutoAmsNetId", client.UseAutoAmsNetID);
+        client.UseTagCache = GetBool(endpoint, "useTagCache", client.UseTagCache);
+        return CreateTcpDriver(endpoint, options, client);
+    }
+
+    private static ICommunicationDriver CreateDeltaTcp(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.Delta.DeltaTcpNet(endpoint.Address, GetPort(endpoint, 502), GetByte(endpoint, "station", 1));
+        client.Series = GetEnum(endpoint, "series", client.Series);
+        return CreateModbusStyleTcpDriver(endpoint, options, client);
+    }
+
+    private static ICommunicationDriver CreateDeltaSerialOverTcp(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.Delta.DeltaSerialOverTcp(endpoint.Address, GetPort(endpoint, 502), GetByte(endpoint, "station", 1));
+        client.Series = GetEnum(endpoint, "series", client.Series);
+        return CreateModbusStyleTcpDriver(endpoint, options, client);
+    }
+
+    private static ICommunicationDriver CreateDeltaSerialAsciiOverTcp(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.Delta.DeltaSerialAsciiOverTcp(endpoint.Address, GetPort(endpoint, 502), GetByte(endpoint, "station", 1));
+        client.Series = GetEnum(endpoint, "series", client.Series);
+        return CreateModbusStyleTcpDriver(endpoint, options, client);
+    }
+
+    private static ICommunicationDriver CreateFatekProgramOverTcp(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.FATEK.FatekProgramOverTcp(endpoint.Address, GetPort(endpoint, 500));
+        return CreateTcpDriver(endpoint, options, client);
+    }
+
+    private static ICommunicationDriver CreateInovanceTcp(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.Inovance.InovanceTcpNet(endpoint.Address, GetPort(endpoint, 502), GetByte(endpoint, "station", 1));
+        client.Series = GetEnum(endpoint, "series", client.Series);
+        return CreateModbusStyleTcpDriver(endpoint, options, client);
+    }
+
+    private static ICommunicationDriver CreateInovanceSerialOverTcp(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.Inovance.InovanceSerialOverTcp(endpoint.Address, GetPort(endpoint, 502), GetByte(endpoint, "station", 1));
+        client.Series = GetEnum(endpoint, "series", client.Series);
+        return CreateModbusStyleTcpDriver(endpoint, options, client);
+    }
+
+    private static ICommunicationDriver CreateInovanceEasy(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.Inovance.InovanceEasyNet(endpoint.Address, GetPort(endpoint, 502));
+        return CreateTcpDriver(endpoint, options, client);
+    }
+
+    private static ICommunicationDriver CreateInovanceConnectedCip(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.Inovance.InovanceConnectedCipNet(endpoint.Address, GetPort(endpoint, 44818));
+        return CreateTcpDriver(endpoint, options, client);
+    }
+
+    private static ICommunicationDriver CreateFujiSph(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.Fuji.FujiSPHNet(endpoint.Address, GetPort(endpoint, 18245));
+        client.ConnectionID = GetByte(endpoint, "connectionId", client.ConnectionID);
+        return CreateTcpDriver(endpoint, options, client);
+    }
+
+    private static ICommunicationDriver CreateFujiSpbOverTcp(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.Fuji.FujiSPBOverTcp(endpoint.Address, GetPort(endpoint, 18245));
+        client.Station = GetByte(endpoint, "station", client.Station);
+        return CreateTcpDriver(endpoint, options, client);
+    }
+
+    private static ICommunicationDriver CreateGeSrtp(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.GE.GeSRTPNet(endpoint.Address, GetPort(endpoint, 18245));
+        return CreateTcpDriver(endpoint, options, client);
+    }
+
+    private static ICommunicationDriver CreateLsFastEnet(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.LSIS.LSFastEnet(endpoint.Address, GetPort(endpoint, 2004));
+        client.CompanyID = GetString(endpoint, "companyId", client.CompanyID);
+        client.BaseNo = GetByte(endpoint, "baseNo", client.BaseNo);
+        client.SlotNo = GetByte(endpoint, "slotNo", client.SlotNo);
+        return CreateTcpDriver(endpoint, options, client);
+    }
+
+    private static ICommunicationDriver CreateLsCnetOverTcp(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.LSIS.LSCnetOverTcp(endpoint.Address, GetPort(endpoint, 2004));
+        client.Station = GetByte(endpoint, "station", client.Station);
+        return CreateTcpDriver(endpoint, options, client);
+    }
+
+    private static ICommunicationDriver CreateXinJeTcp(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.XINJE.XinJETcpNet(endpoint.Address, GetPort(endpoint, 502), GetByte(endpoint, "station", 1));
+        return CreateModbusStyleTcpDriver(endpoint, options, client);
+    }
+
+    private static ICommunicationDriver CreateXinJeInternal(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.XINJE.XinJEInternalNet(endpoint.Address, GetPort(endpoint, 502), GetByte(endpoint, "station", 1));
+        client.DataFormat = GetEnum(endpoint, "dataFormat", client.DataFormat);
+        client.IsStringReverse = GetBool(endpoint, "isStringReverse", client.IsStringReverse);
+        return CreateModbusStyleTcpDriver(endpoint, options, client);
+    }
+
+    private static ICommunicationDriver CreateXinJeSerialOverTcp(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.XINJE.XinJESerialOverTcp(endpoint.Address, GetPort(endpoint, 502), GetByte(endpoint, "station", 1));
+        client.Series = GetEnum(endpoint, "series", client.Series);
+        return CreateModbusStyleTcpDriver(endpoint, options, client);
+    }
+
+    private static ICommunicationDriver CreateYaskawaMemobusTcp(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.YASKAWA.MemobusTcpNet(endpoint.Address, GetPort(endpoint, 502));
+        client.CpuFrom = GetByte(endpoint, "cpuFrom", client.CpuFrom);
+        client.CpuTo = GetByte(endpoint, "cpuTo", client.CpuTo);
+        return CreateTcpDriver(endpoint, options, client);
+    }
+
+    private static ICommunicationDriver CreateYaskawaMemobusUdp(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.YASKAWA.MemobusUdpNet(endpoint.Address, GetPort(endpoint, 502));
+        client.CpuFrom = GetByte(endpoint, "cpuFrom", client.CpuFrom);
+        client.CpuTo = GetByte(endpoint, "cpuTo", client.CpuTo);
+        return new HslCommunicationDriver(
+            endpoint,
+            options,
+            client,
+            _ => Task.FromResult(new OperateResult { IsSuccess = true }),
+            _ => Task.FromResult(new OperateResult { IsSuccess = true }),
+            () => DisposeIfNeeded(client));
+    }
+
+    private static ICommunicationDriver CreateMegMeetTcp(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.MegMeet.MegMeetTcpNet(endpoint.Address, GetPort(endpoint, 502), GetByte(endpoint, "station", 1));
+        return CreateModbusStyleTcpDriver(endpoint, options, client);
+    }
+
+    private static ICommunicationDriver CreateMegMeetSerialOverTcp(CommunicationEndpoint endpoint, CommunicationOptions options)
+    {
+        var client = new HslCommunication.Profinet.MegMeet.MegMeetSerialOverTcp(endpoint.Address, GetPort(endpoint, 502), GetByte(endpoint, "station", 1));
+        return CreateModbusStyleTcpDriver(endpoint, options, client);
+    }
+
     private static async Task<OperateResult> ConnectTcpAsync(DeviceTcpNet client, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -472,6 +902,49 @@ public static class HslCommunicationDriverFactory
         cancellationToken.ThrowIfCancellationRequested();
         client.Close();
         return Task.FromResult(new OperateResult { IsSuccess = true });
+    }
+
+    private static ICommunicationDriver CreateTcpDriver(
+        CommunicationEndpoint endpoint,
+        CommunicationOptions options,
+        DeviceTcpNet client)
+    {
+        ConfigureTcp(client, options);
+        return new HslCommunicationDriver(
+            endpoint,
+            options,
+            client,
+            cancellationToken => ConnectTcpAsync(client, cancellationToken),
+            cancellationToken => DisconnectTcpAsync(client, cancellationToken),
+            client.Dispose);
+    }
+
+    private static ICommunicationDriver CreateModbusStyleTcpDriver(
+        CommunicationEndpoint endpoint,
+        CommunicationOptions options,
+        DeviceTcpNet client)
+    {
+        ConfigureTcp(client, options);
+        if (client is HslCommunication.ModBus.IModbus modbus)
+        {
+            ConfigureModbus(modbus, endpoint);
+        }
+
+        return new HslCommunicationDriver(
+            endpoint,
+            options,
+            client,
+            cancellationToken => ConnectTcpAsync(client, cancellationToken),
+            cancellationToken => DisconnectTcpAsync(client, cancellationToken),
+            client.Dispose);
+    }
+
+    private static void DisposeIfNeeded(object client)
+    {
+        if (client is IDisposable disposable)
+        {
+            disposable.Dispose();
+        }
     }
 
     private static void ConfigureTcp(DeviceTcpNet client, CommunicationOptions options)
@@ -509,6 +982,49 @@ public static class HslCommunicationDriverFactory
         }
     }
 
+    private static void ConfigureOmronHostLink(HslCommunication.Profinet.Omron.Helper.IHostLink client, CommunicationEndpoint endpoint)
+    {
+        client.PlcType = GetEnum(endpoint, "plcType", client.PlcType);
+        client.ICF = GetByte(endpoint, "icf", client.ICF);
+        client.DA2 = GetByte(endpoint, "da2", client.DA2);
+        client.SA2 = GetByte(endpoint, "sa2", client.SA2);
+        client.SID = GetByte(endpoint, "sid", client.SID);
+        client.UnitNumber = GetByte(endpoint, "unitNumber", client.UnitNumber);
+        client.ResponseWaitTime = GetByte(endpoint, "responseWaitTime", client.ResponseWaitTime);
+        client.ReadSplits = GetInt(endpoint, "readSplits", client.ReadSplits);
+    }
+
+    private static void ConfigureMelsecMc(HslCommunication.Profinet.Melsec.Helper.IReadWriteMc client, CommunicationEndpoint endpoint)
+    {
+        client.NetworkNumber = GetByte(endpoint, "networkNumber", client.NetworkNumber);
+        client.NetworkStationNumber = GetByte(endpoint, "networkStationNumber", client.NetworkStationNumber);
+        client.PLCNumber = GetByte(endpoint, "plcNumber", client.PLCNumber);
+        client.TargetIOStation = GetUShort(endpoint, "targetIOStation", client.TargetIOStation);
+        client.EnableWriteBitToWordRegister = GetBool(endpoint, "enableWriteBitToWordRegister", client.EnableWriteBitToWordRegister);
+    }
+
+    private static void ConfigureMelsecA3C(HslCommunication.Profinet.Melsec.Helper.IReadWriteA3C client, CommunicationEndpoint endpoint)
+    {
+        client.Station = GetByte(endpoint, "station", client.Station);
+        client.Format = GetInt(endpoint, "format", client.Format);
+        client.SumCheck = GetBool(endpoint, "sumCheck", client.SumCheck);
+        client.EnableWriteBitToWordRegister = GetBool(endpoint, "enableWriteBitToWordRegister", client.EnableWriteBitToWordRegister);
+    }
+
+    private static void ConfigureMelsecFxLinks(HslCommunication.Profinet.Melsec.Helper.IReadWriteFxLinks client, CommunicationEndpoint endpoint)
+    {
+        client.Station = GetByte(endpoint, "station", client.Station);
+        client.Format = GetInt(endpoint, "format", client.Format);
+        client.SumCheck = GetBool(endpoint, "sumCheck", client.SumCheck);
+        client.WaittingTime = GetByte(endpoint, "waittingTime", client.WaittingTime);
+    }
+
+    private static void ConfigureAllenBradley(HslCommunication.Profinet.AllenBradley.AllenBradleyNet client, CommunicationEndpoint endpoint)
+    {
+        client.Slot = GetByte(endpoint, "slot", client.Slot);
+        client.ReadArrayUseSegment = GetBool(endpoint, "readArrayUseSegment", client.ReadArrayUseSegment);
+    }
+
     private static int GetPort(CommunicationEndpoint endpoint, int defaultPort)
         => endpoint.Port > 0 ? endpoint.Port : defaultPort;
 
@@ -531,6 +1047,14 @@ public static class HslCommunicationDriverFactory
         => TryGet(endpoint, key, out var value) && byte.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed)
             ? parsed
             : defaultValue;
+
+    private static ushort GetUShort(CommunicationEndpoint endpoint, string key, ushort defaultValue)
+        => TryGet(endpoint, key, out var value) && ushort.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed)
+            ? parsed
+            : defaultValue;
+
+    private static string GetString(CommunicationEndpoint endpoint, string key, string defaultValue)
+        => TryGet(endpoint, key, out var value) ? value : defaultValue;
 
     private static TEnum GetEnum<TEnum>(CommunicationEndpoint endpoint, string key, TEnum defaultValue)
         where TEnum : struct, Enum

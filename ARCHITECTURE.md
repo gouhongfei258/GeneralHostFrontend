@@ -63,17 +63,52 @@
 
 - `SimulatorCommunicationDriver`
 - `HslCommunicationDriver`
+- `HttpCommunicationDriver`
+- `TcpClientCommunicationDriver`
+- `TcpServerCommunicationDriver`
 - `CommunicationDriverFactory`
 - `CommunicationConnectionPool`
 
 HSL 适配器当前支持：
 
 - `DriverKind.ModbusTcp`
+- `DriverKind.ModbusUdp`
 - `DriverKind.ModbusRtu`
 - `DriverKind.SiemensS7`
+- `DriverKind.SiemensFetchWrite`
+- `DriverKind.SiemensPpiOverTcp`
 - `DriverKind.OmronFins`
+- `DriverKind.OmronFinsUdp`
+- `DriverKind.OmronHostLinkOverTcp`
+- `DriverKind.OmronHostLinkCModeOverTcp`
+- `DriverKind.OmronCip`
+- `DriverKind.OmronConnectedCip`
+- `DriverKind.MelsecMc` / `MelsecMcUdp` / `MelsecMcAscii` / `MelsecMcAsciiUdp` / `MelsecMcR` / `MelsecA1E` / `MelsecA1EAscii` / `MelsecA3COverTcp` / `MelsecFxLinksOverTcp` / `MelsecFxSerialOverTcp` / `MelsecCip`
+- `DriverKind.KeyenceMc` / `KeyenceMcAscii` / `KeyenceNanoOverTcp`
+- `DriverKind.PanasonicMc` / `PanasonicMewtocolOverTcp`
+- `DriverKind.AllenBradleyCip` / `AllenBradleyConnectedCip` / `AllenBradleyPccc` / `AllenBradleySlc`
+- `DriverKind.BeckhoffAds`
+- `DriverKind.DeltaTcp` / `DeltaSerialOverTcp` / `DeltaSerialAsciiOverTcp`
+- `DriverKind.FatekProgramOverTcp`
+- `DriverKind.InovanceTcp` / `InovanceSerialOverTcp` / `InovanceEasy` / `InovanceConnectedCip`
+- `DriverKind.FujiSph` / `FujiSpbOverTcp`
+- `DriverKind.GeSrtp`
+- `DriverKind.LsFastEnet` / `LsCnetOverTcp`
+- `DriverKind.XinJeTcp` / `XinJeInternal` / `XinJeSerialOverTcp`
+- `DriverKind.YaskawaMemobusTcp` / `YaskawaMemobusUdp`
+- `DriverKind.MegMeetTcp` / `MegMeetSerialOverTcp`
+
+通用网络适配器当前支持：
+
+- `DriverKind.Http`
+- `DriverKind.TcpClient`
+- `DriverKind.TcpServer`
 
 `CommunicationEndpoint.Address` 用于 IP 地址或串口名，`Port` 用于 TCP 端口。协议细节通过 `Parameters` 配置，例如 `station`、`baudRate`、`plcType`、`rack`、`slot`、`dataFormat`。String/Bytes 类型 Tag 可在地址后追加 `;length=16` 指定读取长度，例如 `D100;length=16`。
+
+HSL 设备参数由设备管理窗口的 `Defaults` 写入 `Parameters`，并在 `HslCommunicationDriverFactory` 创建对应 HSL client 时应用；典型参数包括 Siemens 的 `plcType`、`rack`、`slot`、Omron FINS/HostLink 的 `da1`、`sa1`、`unitNumber`、Melsec MC 的 `networkNumber`、`plcNumber`、`targetIOStation`、Allen-Bradley/Omron CIP 的连接参数、Beckhoff ADS 的 `amsPort`、LS FastEnet 的 `companyId`、`baseNo`、`slotNo`、Yaskawa Memobus 的 `cpuFrom`、`cpuTo` 等。
+
+HTTP 适配器的 `Address` 为 Base URL，Tag 地址为请求路径，可追加 `;jsonPath=data.value` 提取 JSON 字段；常用参数包括 `readMethod`、`writeMethod`、`heartbeatPath`、`contentType`、`header.*`、`writeBodyTemplate`。TCP Client 适配器连接远端 `Address:Port`，默认发送 `READ {address}` / `WRITE {address} {value}`，可用 `readTemplate`、`writeTemplate`、`terminator`、`responseTerminator` 覆盖。TCP Server 适配器默认监听本地 `Address:Port`，接收客户端上报的 `address=value` 或 `{"address":"...","value":...}` 并缓存为 Tag 值，写入时向客户端广播 `WRITE {address} {value}`；接收结束符使用 `terminator`，广播写命令结束符使用 `writeTerminator`，未配置时回退到 `terminator`。
 
 代码位置：`Infrastructure/Communication/`
 
