@@ -42,6 +42,8 @@ public interface IDataViewerQueryService
     Task<PagedResult<IReadOnlyDictionary<string, object?>>> QueryAsync(PagedQuery query, CancellationToken cancellationToken = default);
 
     Task ExportCsvAsync(PagedQuery query, Stream output, CancellationToken cancellationToken = default);
+
+    Task ExportExcelAsync(PagedQuery query, Stream output, CancellationToken cancellationToken = default);
 }
 
 public interface IDatabaseHealthMonitor

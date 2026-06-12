@@ -30,6 +30,7 @@
   
     <Application.Styles>
         <FluentTheme />
+        <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
         <StyleInclude Source="avares://NodifyM.Avalonia/Styles/ControlStyles.axaml"/>
 
         <Style Selector="TextBlock">

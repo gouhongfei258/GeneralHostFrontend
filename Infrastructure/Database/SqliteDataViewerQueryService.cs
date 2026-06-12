@@ -7,6 +7,8 @@ namespace GeneralHostFrontend.Infrastructure.Database;
 
 public sealed class SqliteDataViewerQueryService : IDataViewerQueryService, IDatabaseHealthMonitor
 {
+    private const int ExportRowLimit = 10000;
+
     private readonly string _databasePath;
     private readonly string _connectionString;
 
@@ -58,7 +60,7 @@ public sealed class SqliteDataViewerQueryService : IDataViewerQueryService, IDat
     public async Task<PagedResult<IReadOnlyDictionary<string, object?>>> QueryAsync(PagedQuery query, CancellationToken cancellationToken = default)
     {
         var pageIndex = Math.Max(0, query.PageIndex);
-        var pageSize = Math.Clamp(query.PageSize, 1, 500);
+        var pageSize = Math.Clamp(query.PageSize, 1, ExportRowLimit);
 
         await using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
@@ -104,21 +106,22 @@ public sealed class SqliteDataViewerQueryService : IDataViewerQueryService, IDat
 
     public async Task ExportCsvAsync(PagedQuery query, Stream output, CancellationToken cancellationToken = default)
     {
-        var result = await QueryAsync(query with { PageIndex = 0, PageSize = 500 }, cancellationToken);
-        if (result.Items.Count == 0)
-        {
-            return;
-        }
+        var (columns, rows) = await QueryExportRowsAsync(query, cancellationToken);
 
         await using var writer = new StreamWriter(output, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true), leaveOpen: true);
-        var columns = result.Items[0].Keys.ToArray();
         await writer.WriteLineAsync(string.Join(",", columns.Select(EscapeCsv)));
 
-        foreach (var row in result.Items)
+        foreach (var row in rows)
         {
             var line = string.Join(",", columns.Select(column => EscapeCsv(Format(row.GetValueOrDefault(column)))));
             await writer.WriteLineAsync(line);
         }
+    }
+
+    public async Task ExportExcelAsync(PagedQuery query, Stream output, CancellationToken cancellationToken = default)
+    {
+        var (columns, rows) = await QueryExportRowsAsync(query, cancellationToken);
+        await ExcelWorkbookWriter.WriteAsync(columns, rows, output, cancellationToken);
     }
 
     public async Task<DatabaseHealth> CheckAsync(CancellationToken cancellationToken = default)
@@ -208,19 +211,60 @@ public sealed class SqliteDataViewerQueryService : IDataViewerQueryService, IDat
         for (var index = 0; index < filters.Count; index++)
         {
             var filter = filters[index];
-            if (string.IsNullOrWhiteSpace(filter.Value) || !schema.FilterableColumns.Contains(filter.Field))
+            if (string.IsNullOrWhiteSpace(filter.Value))
             {
                 continue;
             }
 
-            var parameterName = $"$filter{index}";
-            clauses.Add($"{QuoteIdentifier(filter.Field)} like {parameterName}");
-            parameters.Add(new SqlParameterValue(parameterName, $"%{filter.Value}%"));
+            if (filter.Field == "*")
+            {
+                var parameterName = $"$filter{index}";
+                var value = NormalizeFilterValue(filter.Operator, filter.Value);
+                var globalClauses = schema.FilterableColumns
+                    .Select(column => BuildPredicate(column, filter.Operator, parameterName))
+                    .ToArray();
+
+                clauses.Add("(" + string.Join(" or ", globalClauses) + ")");
+                parameters.Add(new SqlParameterValue(parameterName, value));
+                continue;
+            }
+
+            if (!schema.FilterableColumns.Contains(filter.Field))
+            {
+                continue;
+            }
+
+            var fieldParameterName = $"$filter{index}";
+            clauses.Add(BuildPredicate(filter.Field, filter.Operator, fieldParameterName));
+            parameters.Add(new SqlParameterValue(fieldParameterName, NormalizeFilterValue(filter.Operator, filter.Value)));
         }
 
         return clauses.Count == 0
             ? new SqlWhere(string.Empty, Array.Empty<SqlParameterValue>())
-            : new SqlWhere(" where (" + string.Join(" or ", clauses) + ")", parameters);
+            : new SqlWhere(" where " + string.Join(" and ", clauses), parameters);
+    }
+
+    private static string BuildPredicate(string field, string @operator, string parameterName)
+    {
+        var column = QuoteIdentifier(field);
+        return @operator switch
+        {
+            "equals" => $"cast({column} as text) = {parameterName}",
+            "startsWith" => $"cast({column} as text) like {parameterName}",
+            "endsWith" => $"cast({column} as text) like {parameterName}",
+            _ => $"cast({column} as text) like {parameterName}"
+        };
+    }
+
+    private static string NormalizeFilterValue(string @operator, string value)
+    {
+        return @operator switch
+        {
+            "equals" => value,
+            "startsWith" => value + "%",
+            "endsWith" => "%" + value,
+            _ => "%" + value + "%"
+        };
     }
 
     private static string BuildOrderBy(TableSchema schema, IReadOnlyList<SortDescriptor>? sorts)
@@ -263,6 +307,18 @@ public sealed class SqliteDataViewerQueryService : IDataViewerQueryService, IDat
         return value.Contains(',') || value.Contains('"') || value.Contains('\n')
             ? $"\"{value.Replace("\"", "\"\"")}\""
             : value;
+    }
+
+    private async Task<(IReadOnlyList<string> Columns, IReadOnlyList<IReadOnlyDictionary<string, object?>> Rows)> QueryExportRowsAsync(
+        PagedQuery query,
+        CancellationToken cancellationToken)
+    {
+        await using var connection = new SqliteConnection(_connectionString);
+        await connection.OpenAsync(cancellationToken);
+        var tableInfo = await LoadTableInfoAsync(connection, query.Table, cancellationToken);
+        var columns = tableInfo.Columns.Select(column => column.Name).ToArray();
+        var result = await QueryAsync(query with { PageIndex = 0, PageSize = ExportRowLimit }, cancellationToken);
+        return (columns, result.Items);
     }
 
     private async Task<DatabaseTableInfo> LoadTableInfoAsync(SqliteConnection connection, string tableName, CancellationToken cancellationToken)
