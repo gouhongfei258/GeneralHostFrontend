@@ -1,0 +1,88 @@
+name: .NET Build and Release
+
+# 推送到 v 开头的标签时触发
+on:
+  push:
+    tags:
+      - 'v*'
+
+# 赋予工作流创建 Release 的写权限
+permissions:
+  contents: write
+
+jobs:
+  # ==================== 1. 编译阶段 ====================
+  build:
+    name: Build for ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        # 利用矩阵同时在三个系统上跑编译
+        include:
+          - os: ubuntu-latest
+            runtime: linux-x64
+            artifact_name: GHF-linux-x64.tar.gz
+          - os: windows-latest
+            runtime: win-x64
+            artifact_name: GHF-win-x64.zip
+          - os: macos-latest
+            runtime: osx-x64
+            artifact_name: GHF-osx-x64.tar.gz
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    # 编译并发布（Publish）为独立运行的单文件程序，不需要目标机器安装 .NET 运行时
+    - name: Publish
+      run: |
+        dotnet publish -c Release -r ${{ matrix.runtime }} --self-contained true -p:PublishSingleFile=true -o ./publish
+
+    # Windows 下打包为 .zip
+    - name: Pack Artifact (Windows)
+      if: matrix.os == 'windows-latest'
+      run: Compress-Archive -Path ./publish/* -DestinationPath ./${{ matrix.artifact_name }}
+
+    # Linux 和 macOS 下打包为 .tar.gz
+    - name: Pack Artifact (Linux/macOS)
+      if: matrix.os != 'windows-latest'
+      run: tar -czf ./${{ matrix.artifact_name }} -C ./publish .
+
+    # 将各系统的编译产物临时存到 GitHub 空间，供下一个 job 下载
+    - name: Upload Temporary Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.artifact_name }}
+        path: ./${{ matrix.artifact_name }}
+
+  # ==================== 2. 发布阶段 ====================
+  release:
+    name: Create GitHub Release
+    needs: build # 等待上面的编译任务全部完成后再执行
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    # 下载刚才所有系统编译出来的压缩包
+    - name: Download All Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: ./artifacts
+        pattern: my-app-*
+        merge-multiple: true
+
+    # 创建 Release 并挂载所有文件
+    - name: Upload to GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        name: Release ${{ github.ref_name }}
+        generate_release_notes: true
+        files: ./artifacts/*
