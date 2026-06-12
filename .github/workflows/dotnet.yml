@@ -76,7 +76,7 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         path: ./artifacts
-        pattern: my-app-*
+        pattern: GHF-*
         merge-multiple: true
 
     # 创建 Release 并挂载所有文件
