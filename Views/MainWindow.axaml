@@ -83,6 +83,17 @@
                     <TextBlock Text="Hot reload and validation ports are ready." TextWrapping="Wrap" Foreground="#516071"/>
 
                     <TextBlock Text="Tools" FontSize="15" FontWeight="SemiBold" Foreground="#1D2733"/>
+                    <Button Command="{Binding OpenHmiRuntimeCommand}"
+                            Content="Open HMI Runtime"
+                            MinHeight="40"
+                            FontWeight="SemiBold"
+                            Background="#DDEFE9"
+                            Foreground="#163B33"
+                            BorderBrush="#9CCABE"/>
+                    <Button Command="{Binding OpenHmiEditorCommand}"
+                            Content="Open HMI"
+                            MinHeight="40"
+                            FontWeight="SemiBold"/>
                     <Button Command="{Binding OpenLogicEditorCommand}"
                             Content="Open Logic"
                             MinHeight="40"

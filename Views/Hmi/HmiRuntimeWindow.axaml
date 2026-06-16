@@ -1,0 +1,184 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:GeneralHostFrontend.ViewModels.Hmi"
+        xmlns:views="using:GeneralHostFrontend.Views.Hmi"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="760"
+        Width="1280"
+        Height="760"
+        MinWidth="900"
+        MinHeight="560"
+        WindowStartupLocation="CenterScreen"
+        x:Class="GeneralHostFrontend.Views.Hmi.HmiRuntimeWindow"
+        x:DataType="vm:HmiRuntimeViewModel"
+        Title="HMI Runtime">
+
+    <Design.DataContext>
+        <vm:HmiRuntimeViewModel/>
+    </Design.DataContext>
+
+    <Window.Resources>
+        <DataTemplate x:Key="ValueTextTemplate" DataType="{x:Type vm:HmiWidgetViewModel}">
+            <Border Background="White" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="6" Padding="10">
+                <Grid RowDefinitions="Auto,*" RowSpacing="4">
+                    <TextBlock Text="{Binding Text}" Foreground="#475569" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" VerticalAlignment="Center" Spacing="6">
+                        <TextBlock Text="{Binding DisplayValue}" Foreground="#0F766E" FontSize="21" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Text="{Binding Unit}" Foreground="#64748B" FontSize="12" VerticalAlignment="Bottom"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="StateIndicatorTemplate" DataType="{x:Type vm:HmiWidgetViewModel}">
+            <Border Background="White" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="6" Padding="10">
+                <Grid ColumnDefinitions="44,*" ColumnSpacing="10">
+                    <Ellipse Width="34" Height="34" Fill="{Binding StateBrush}" Stroke="#334155" StrokeThickness="1"/>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Text}" Foreground="#1E293B" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Text="{Binding State, StringFormat='State: {0}'}" Foreground="#64748B" FontSize="11"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="CommandButtonTemplate" DataType="{x:Type vm:HmiWidgetViewModel}">
+            <Button Content="{Binding Text}"
+                    Command="{Binding $parent[Window].DataContext.ExecuteWidgetCommand}"
+                    CommandParameter="{Binding}"
+                    HorizontalContentAlignment="Center"
+                    VerticalContentAlignment="Center"
+                    Background="#E0F2FE"
+                    BorderBrush="#7DD3FC"
+                    Foreground="#075985"
+                    FontWeight="SemiBold"/>
+        </DataTemplate>
+
+        <DataTemplate x:Key="TextTemplate" DataType="{x:Type vm:HmiWidgetViewModel}">
+            <TextBlock Text="{Binding Text}" Foreground="{Binding Foreground}" FontSize="{Binding FontSize}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+        </DataTemplate>
+
+        <DataTemplate x:Key="InputBoxTemplate" DataType="{x:Type vm:HmiWidgetViewModel}">
+            <TextBox Text="{Binding Text}" PlaceholderText="{Binding Placeholder}" VerticalContentAlignment="Center"/>
+        </DataTemplate>
+
+        <DataTemplate x:Key="SwitchButtonTemplate" DataType="{x:Type vm:HmiWidgetViewModel}">
+            <ToggleSwitch IsChecked="{Binding State}" Content="{Binding Text}" OnContent="{Binding Text}" OffContent="{Binding Text}"/>
+        </DataTemplate>
+
+        <DataTemplate x:Key="ImageTemplate" DataType="{x:Type vm:HmiWidgetViewModel}">
+            <Border Background="#F8FAFC" BorderBrush="#CBD5E1" BorderThickness="1">
+                <Image Source="{Binding ResolvedImageSource}" Stretch="Uniform" IsVisible="{Binding ResolvedImageSource}"/>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="RectangleTemplate" DataType="{x:Type vm:HmiWidgetViewModel}">
+            <Border Background="{Binding Background}" BorderBrush="{Binding Border}" BorderThickness="{Binding StrokeThickness}" CornerRadius="{Binding CornerRadius}"/>
+        </DataTemplate>
+
+        <DataTemplate x:Key="EllipseTemplate" DataType="{x:Type vm:HmiWidgetViewModel}">
+            <Ellipse Fill="{Binding Background}" Stroke="{Binding Border}" StrokeThickness="{Binding StrokeThickness}"/>
+        </DataTemplate>
+
+        <DataTemplate x:Key="LineTemplate" DataType="{x:Type vm:HmiWidgetViewModel}">
+            <Grid>
+                <Border Height="{Binding StrokeThickness}" Background="{Binding Border}" VerticalAlignment="Center" IsVisible="{Binding IsHorizontalLine}"/>
+                <Border Width="{Binding StrokeThickness}" Background="{Binding Border}" HorizontalAlignment="Center" IsVisible="{Binding IsVerticalLine}"/>
+            </Grid>
+        </DataTemplate>
+
+        <DataTemplate x:Key="ContainerTemplate" DataType="{x:Type vm:HmiWidgetViewModel}">
+            <Border Background="{Binding Background}" BorderBrush="{Binding Border}" BorderThickness="{Binding StrokeThickness}" CornerRadius="{Binding CornerRadius}" Padding="10">
+                <TextBlock Text="{Binding Text}" Foreground="#475569" FontWeight="SemiBold"/>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="ProgressBarTemplate" DataType="{x:Type vm:HmiWidgetViewModel}">
+            <Border Background="White" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="6" Padding="10">
+                <Grid RowDefinitions="Auto,*,Auto" RowSpacing="5">
+                    <TextBlock Text="{Binding Text}" Foreground="#334155" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                    <ProgressBar Grid.Row="1" Minimum="0" Maximum="100" Value="{Binding ProgressPercent}" Foreground="{Binding Background}"/>
+                    <TextBlock Grid.Row="2" Text="{Binding DisplayValue}" Foreground="#64748B" FontSize="11"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="TrendChartTemplate" DataType="{x:Type vm:HmiWidgetViewModel}">
+            <Border Background="White" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="6" Padding="10">
+                <Grid RowDefinitions="Auto,*,Auto" RowSpacing="8">
+                    <TextBlock Text="{Binding Text}" Foreground="#334155" FontWeight="SemiBold"/>
+                    <Border Grid.Row="1" BorderBrush="#CBD5E1" BorderThickness="0,0,0,1">
+                        <Polyline Points="8,92 48,72 88,80 128,42 168,55 208,28 248,44 288,24" Stroke="#0F766E" StrokeThickness="2"/>
+                    </Border>
+                    <TextBlock Grid.Row="2" Text="{Binding DisplayValue, StringFormat='Latest: {0}'}" Foreground="#64748B" FontSize="11"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="AlarmListTemplate" DataType="{x:Type vm:HmiWidgetViewModel}">
+            <Border Background="White" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="6" Padding="10">
+                <Grid RowDefinitions="Auto,*" RowSpacing="8">
+                    <TextBlock Text="{Binding Text}" Foreground="#334155" FontWeight="SemiBold"/>
+                    <StackPanel Grid.Row="1" Spacing="6">
+                        <Border Background="#FEF3C7" Padding="8,5" CornerRadius="4">
+                            <TextBlock Text="{Binding Level, StringFormat='Level: {0}'}" Foreground="#92400E"/>
+                        </Border>
+                        <TextBlock Text="{Binding DisplayValue}" Foreground="#64748B" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </DataTemplate>
+    </Window.Resources>
+
+    <Grid RowDefinitions="Auto,*" Background="#E2E8F0">
+        <Border Grid.Row="0" Background="White" BorderBrush="#CBD5E1" BorderThickness="0,0,0,1" Padding="16,10">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <StackPanel>
+                    <TextBlock Text="{Binding PageName}" Foreground="#1D2733" FontSize="18" FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding StatusMessage}" Foreground="#516071" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+                <TextBlock Grid.Column="1" Text="{Binding PageId}" Foreground="#64748B" VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+
+        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+            <Border Margin="24" Background="{Binding PageBackground}" BorderBrush="#CBD5E1" BorderThickness="1" Width="{Binding PageWidth}" Height="{Binding PageHeight}">
+                <Canvas Width="{Binding PageWidth}" Height="{Binding PageHeight}">
+                    <ItemsControl ItemsSource="{Binding Widgets}" Width="{Binding PageWidth}" Height="{Binding PageHeight}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <Canvas Width="{Binding $parent[ItemsControl].DataContext.PageWidth}" Height="{Binding $parent[ItemsControl].DataContext.PageHeight}"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.Styles>
+                            <Style Selector="ContentPresenter">
+                                <Setter Property="views:DesignerCanvasBehavior.IsWidgetContainerEnabled" Value="True"/>
+                            </Style>
+                        </ItemsControl.Styles>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:HmiWidgetViewModel}">
+                                <Grid Width="{Binding Width}" Height="{Binding Height}">
+                                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource ValueTextTemplate}" IsVisible="{Binding IsValueText}"/>
+                                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource StateIndicatorTemplate}" IsVisible="{Binding IsStateIndicator}"/>
+                                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource CommandButtonTemplate}" IsVisible="{Binding IsCommandButton}"/>
+                                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource TextTemplate}" IsVisible="{Binding IsText}"/>
+                                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource InputBoxTemplate}" IsVisible="{Binding IsInputBox}"/>
+                                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource SwitchButtonTemplate}" IsVisible="{Binding IsSwitchButton}"/>
+                                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource ImageTemplate}" IsVisible="{Binding IsImage}"/>
+                                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource RectangleTemplate}" IsVisible="{Binding IsRectangle}"/>
+                                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource EllipseTemplate}" IsVisible="{Binding IsEllipse}"/>
+                                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource LineTemplate}" IsVisible="{Binding IsLine}"/>
+                                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource ContainerTemplate}" IsVisible="{Binding IsContainer}"/>
+                                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource ProgressBarTemplate}" IsVisible="{Binding IsProgressBar}"/>
+                                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource TrendChartTemplate}" IsVisible="{Binding IsTrendChart}"/>
+                                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource AlarmListTemplate}" IsVisible="{Binding IsAlarmList}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Canvas>
+            </Border>
+        </ScrollViewer>
+    </Grid>
+</Window>

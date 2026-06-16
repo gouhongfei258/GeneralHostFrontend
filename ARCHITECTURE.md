@@ -10,9 +10,10 @@
 - 高频日志与实时数据看板
 - 嵌入式数据库查看器
 - 可视化节点逻辑编辑器
+- 可拖拽画布式 HMI 画面编辑器
 - 统一配置中心
 
-当前实现已进入第三阶段：核心边界、Simulator/HSL 驱动、异步数据管道、Avalonia 工作台、正式 DI 组合根、Serilog 文件日志与 UI Sink、JSON 配置加载、SQLite 数据查看器适配器、设备配置窗口与可视化逻辑编辑器均已落地。
+当前实现已进入第三阶段：核心边界、Simulator/HSL 驱动、异步数据管道、Avalonia 工作台、正式 DI 组合根、Serilog 文件日志与 UI Sink、JSON 配置加载、SQLite 数据查看器适配器、设备配置窗口与可视化逻辑编辑器均已落地。画布式 HMI 画面编辑器作为下一阶段 UI 组态能力纳入架构设计。
 
 ## 分层原则
 
@@ -284,6 +285,60 @@ PLC 结构读取推荐模型：
 - `ViewModels/Logic/`
 - `Views/Logic/`
 
+### 10. 画布式 HMI 编辑器
+
+画布式 HMI 编辑器用于在应用内部提供类似 WinForms Designer / 组态软件的画面编辑能力，但不生成 C# 或 AXAML 代码。用户编辑的是 HMI 画面文档，运行时根据文档动态渲染控件并绑定实时 Tag 数据。
+
+Core 层建议定义画面文档、控件定义、绑定和存储端口：
+
+- `HmiPageDocument`
+- `HmiWidgetDefinition`
+- `HmiWidgetBindingDefinition`
+- `HmiWidgetStyleDefinition`
+- `HmiPageViewport`
+- `IHmiPageStore`
+
+第一版画面文档建议保存为 JSON，默认路径为 `Config/hmi-pages/*.json`。文档只描述画面结构和绑定关系，不直接保存 Avalonia 控件实例：
+
+- 页面名称、设计尺寸、背景、网格设置
+- 控件类型、位置、尺寸、旋转角度、层级 `ZIndex`
+- 控件样式，例如颜色、字体、边框、透明度、状态色
+- Tag 绑定，例如主值、可见性、启用状态、颜色、报警状态
+- 格式化规则，例如数值格式、单位、上下限、枚举文本
+- 权限标记，例如编辑权限、操作权限、可见权限
+
+编辑器 UI 建议分为编辑模式和运行模式：
+
+- 编辑模式使用 Avalonia `Canvas` 或自定义 `DesignerCanvas` 作为主画布，提供拖拽添加、选中、移动、缩放、对齐、复制、删除、层级调整和网格吸附。
+- 左侧工具箱提供 HMI 控件类型，例如数值显示、文本、按钮、状态灯、图片、SVG 图元、报警牌、趋势图占位控件。
+- 右侧属性面板编辑选中控件的几何、样式、Tag 绑定、格式化、权限和交互行为。
+- 运行模式读取同一份 `HmiPageDocument`，订阅 `ITagDataPipeline` 或 Tag 快照服务，将实时 `TagValue` 投影到控件 ViewModel。
+- 编辑器保存的是画面配置，修改画面后不需要重新编译应用。
+
+HMI 控件建议使用小而稳定的控件模型，不直接暴露 Avalonia 控件树给存储层：
+
+- `ValueText`：显示实时数值、单位、质量戳和格式化文本
+- `StateIndicator`：根据布尔值、枚举或阈值显示状态色
+- `CommandButton`：绑定写 Tag、脉冲写入或触发逻辑命令
+- `Image` / `SvgImage`：显示设备图元，可按状态切换资源或颜色
+- `TrendChart`：显示指定 Tag 的实时或历史趋势，第一版可先作为占位控件
+- `Container`：用于分组、背景面板和局部坐标系
+
+与现有模块的关系：
+
+- HMI 运行态只消费 Tag 管道和配置，不直接访问硬件驱动。
+- HMI 控件的写入行为应通过 Application/Core 暴露的命令端口完成，避免 UI 直接调用通信驱动。
+- HMI 权限应复用 RBAC 模型，将页面、控件、写入操作分别映射到权限。
+- HMI 页面存储可复用 `JsonSettingsStore` 的实现思路，但建议独立为 `IHmiPageStore`，便于后续切换数据库或远程配置中心。
+- 可视化逻辑编辑器负责后端逻辑编排，HMI 编辑器负责前端画面组态，两者通过 Tag、命令和权限边界协作。
+
+推荐代码位置：
+
+- `Core/Hmi/HmiContracts.cs`
+- `Infrastructure/Hmi/JsonHmiPageStore.cs`
+- `ViewModels/Hmi/`
+- `Views/Hmi/`
+
 ## 当前可运行流程
 
 1. `App` 调用 `CompositionRoot.Build()` 创建服务容器。
@@ -300,12 +355,16 @@ PLC 结构读取推荐模型：
 12. 点击 `Open Devices` 打开独立设备管理窗口，编辑 PLC IP、端口、串口与协议参数。
 13. 点击 `Open Logic` 打开可视化逻辑编辑器，编辑节点图、保存 JSON、生成并编译检查后端 C# 逻辑代码。
 
+画布式 HMI 编辑器尚未接入当前可运行流程。接入后推荐流程为：点击 `Open HMI` 打开画面编辑器，编辑并保存 `HmiPageDocument`，运行模式读取画面文档并订阅实时 Tag 数据刷新控件状态。
+
 ## 下一阶段建议
 
-1. 实现 DataGrid 版通用查看器：动态列、过滤条件、页码输入、Excel 导出。
-2. 扩展 SQLite：配方、报警历史、操作审计、系统配置表。
-3. 扩展更多真实通信适配器：USB HID、USB Bulk、通用 SerialPort 自由协议。
-4. 实现权限系统：登录、角色管理、工作区路由、控件级权限附加属性。
-5. 引入 `Microsoft.Extensions.Hosting`，使 Runtime 生命周期与桌面应用生命周期更自然地绑定。
-6. 增加自动化测试：Simulator/HSL 驱动、配置验证、管道背压、扫描调度。
-7. 将逻辑编辑器生成的 `IGeneratedHostLogic` 接入 `HostRuntime`，并实现编译域卸载、启停控制、执行审计和安全白名单。
+1. 打磨 HMI 编辑器到可交付状态：补齐撤销/重做、键盘快捷键、多选对齐、画布缩放、页面复制/重命名、控件锁定、页面保存冲突提示和文档脏状态提示。
+2. 完善 HMI 运行态闭环：将 `ITagWriteService` 从当前管道回写实现升级为真正经过 Application/Runtime 的写入命令，统一校验 Tag 可写性、类型转换、设备连接状态、写入结果和失败日志。
+3. 增加 HMI 文档校验与迁移：为 `HmiPageDocument`、控件、绑定、动作、资源引用提供验证器和版本迁移器，保证旧 JSON 可兼容加载，损坏配置可给出明确诊断。
+4. 建立 HMI 自动化测试基线：覆盖 JSON round-trip、默认页面生成、文件名清洗、控件目录默认值、Tag 绑定刷新、动作执行、页面跳转、模板保存/加载和资源解析。
+5. 接入权限与审计第一版：实现登录/角色/权限配置，将工作区、HMI 页面、控件可见性、控件操作和 Tag 写入全部纳入 RBAC，并把写入动作记录到操作审计日志。
+6. 完善数据与报警能力：扩展 SQLite 表结构和服务边界，落地报警历史、操作审计、配方、系统配置，随后让 HMI 的 `AlarmList`、`TrendChart` 从真实服务读取数据。
+7. 强化运行时生命周期：引入 `Microsoft.Extensions.Hosting` 或等价应用宿主管理方式，把 `HostRuntime`、Tag 管道、日志、配置热加载、HMI 运行窗口和退出清理统一纳入生命周期。
+8. 推进逻辑编辑器运行集成：将生成的 `IGeneratedHostLogic` 接入 `HostRuntime`，实现编译域卸载、启停控制、执行审计、安全白名单，并让 HMI 动作可触发受控逻辑命令。
+9. 扩展真实通信和设备接入：在现有 HSL、HTTP、TCP 基础上补充通用 SerialPort、USB HID/USB Bulk，并为关键驱动增加连接诊断、重连策略和最小集成测试。

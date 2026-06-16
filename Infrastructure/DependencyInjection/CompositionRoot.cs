@@ -1,11 +1,14 @@
 using GeneralHostFrontend.Application;
+using GeneralHostFrontend.Application.Hmi;
 using GeneralHostFrontend.Core.Communication;
+using GeneralHostFrontend.Core.Hmi;
 using GeneralHostFrontend.Core.Logging;
 using GeneralHostFrontend.Core.Logic;
 using GeneralHostFrontend.Core.Pipelines;
 using GeneralHostFrontend.Core.Settings;
 using GeneralHostFrontend.Infrastructure.Communication;
 using GeneralHostFrontend.Infrastructure.Database;
+using GeneralHostFrontend.Infrastructure.Hmi;
 using GeneralHostFrontend.Infrastructure.Logic;
 using GeneralHostFrontend.Infrastructure.Logging;
 using GeneralHostFrontend.Infrastructure.Logging.Serilog;
@@ -14,6 +17,7 @@ using GeneralHostFrontend.Infrastructure.Settings;
 using GeneralHostFrontend.ViewModels;
 using GeneralHostFrontend.ViewModels.Database;
 using GeneralHostFrontend.ViewModels.Devices;
+using GeneralHostFrontend.ViewModels.Hmi;
 using GeneralHostFrontend.ViewModels.Logic;
 using GeneralHostFrontend.ViewModels.Tags;
 using Microsoft.Extensions.DependencyInjection;
@@ -48,6 +52,23 @@ public static class CompositionRoot
         });
         services.AddSingleton<Core.Database.IDataViewerQueryService>(provider => provider.GetRequiredService<SqliteDataViewerQueryService>());
         services.AddSingleton<Core.Database.IDatabaseHealthMonitor>(provider => provider.GetRequiredService<SqliteDataViewerQueryService>());
+        services.AddSingleton<IHmiPageStore>(_ =>
+        {
+            var pagesPath = Path.Combine(AppContext.BaseDirectory, "Config", "hmi-pages");
+            return new JsonHmiPageStore(pagesPath);
+        });
+        services.AddSingleton<IHmiWidgetCatalog, DefaultHmiWidgetCatalog>();
+        services.AddSingleton<ITagWriteService, HmiTagWriteService>();
+        services.AddSingleton<IHmiResourceStore>(_ =>
+        {
+            var resourcesPath = Path.Combine(AppContext.BaseDirectory, "Config", "hmi-resources");
+            return new FileSystemHmiResourceStore(resourcesPath);
+        });
+        services.AddSingleton<IHmiTemplateStore>(_ =>
+        {
+            var templatesPath = Path.Combine(AppContext.BaseDirectory, "Config", "hmi-resources", "templates");
+            return new JsonHmiTemplateStore(templatesPath);
+        });
         services.AddSingleton<ILogicGraphStore>(_ =>
         {
             var graphPath = Path.Combine(AppContext.BaseDirectory, "Config", "logicgraph.json");
@@ -71,6 +92,10 @@ public static class CompositionRoot
         services.AddSingleton<Func<LogicEditorViewModel>>(provider => provider.GetRequiredService<LogicEditorViewModel>);
         services.AddTransient<TagEditorViewModel>();
         services.AddSingleton<Func<TagEditorViewModel>>(provider => provider.GetRequiredService<TagEditorViewModel>);
+        services.AddTransient<HmiEditorViewModel>();
+        services.AddSingleton<Func<HmiEditorViewModel>>(provider => provider.GetRequiredService<HmiEditorViewModel>);
+        services.AddTransient<HmiRuntimeViewModel>();
+        services.AddSingleton<Func<HmiRuntimeViewModel>>(provider => provider.GetRequiredService<HmiRuntimeViewModel>);
         services.AddSingleton<MainWindowViewModel>();
 
         return services.BuildServiceProvider();

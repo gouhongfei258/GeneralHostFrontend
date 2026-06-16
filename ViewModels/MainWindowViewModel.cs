@@ -10,10 +10,12 @@ using GeneralHostFrontend.Core.Tags;
 using GeneralHostFrontend.ViewModels.Database;
 using GeneralHostFrontend.ViewModels.Dashboard;
 using GeneralHostFrontend.ViewModels.Devices;
+using GeneralHostFrontend.ViewModels.Hmi;
 using GeneralHostFrontend.ViewModels.Logic;
 using GeneralHostFrontend.ViewModels.Tags;
 using GeneralHostFrontend.Views.Database;
 using GeneralHostFrontend.Views.Devices;
+using GeneralHostFrontend.Views.Hmi;
 using GeneralHostFrontend.Views.Logic;
 using GeneralHostFrontend.Views.Tags;
 
@@ -29,6 +31,8 @@ public partial class MainWindowViewModel : ViewModelBase, IAsyncDisposable
     private readonly Func<DeviceEditorViewModel> _deviceEditorFactory;
     private readonly Func<LogicEditorViewModel> _logicEditorFactory;
     private readonly Func<TagEditorViewModel> _tagEditorFactory;
+    private readonly Func<HmiEditorViewModel> _hmiEditorFactory;
+    private readonly Func<HmiRuntimeViewModel> _hmiRuntimeFactory;
     private readonly CancellationTokenSource _stop = new();
     private readonly List<Task> _subscriptions = new();
     private readonly Dictionary<string, TagValueViewModel> _tagIndex = new(StringComparer.OrdinalIgnoreCase);
@@ -55,6 +59,8 @@ public partial class MainWindowViewModel : ViewModelBase, IAsyncDisposable
         _deviceEditorFactory = null!;
         _logicEditorFactory = null!;
         _tagEditorFactory = null!;
+        _hmiEditorFactory = null!;
+        _hmiRuntimeFactory = null!;
     }
 
     public MainWindowViewModel(
@@ -65,7 +71,9 @@ public partial class MainWindowViewModel : ViewModelBase, IAsyncDisposable
         Func<DatabaseViewerViewModel> databaseViewerFactory,
         Func<DeviceEditorViewModel> deviceEditorFactory,
         Func<LogicEditorViewModel> logicEditorFactory,
-        Func<TagEditorViewModel> tagEditorFactory)
+        Func<TagEditorViewModel> tagEditorFactory,
+        Func<HmiEditorViewModel> hmiEditorFactory,
+        Func<HmiRuntimeViewModel> hmiRuntimeFactory)
     {
         StartupTrace.Write("MainWindowViewModel constructor begin.");
         _settingsStore = settingsStore;
@@ -76,6 +84,8 @@ public partial class MainWindowViewModel : ViewModelBase, IAsyncDisposable
         _deviceEditorFactory = deviceEditorFactory;
         _logicEditorFactory = logicEditorFactory;
         _tagEditorFactory = tagEditorFactory;
+        _hmiEditorFactory = hmiEditorFactory;
+        _hmiRuntimeFactory = hmiRuntimeFactory;
         RuntimeState = _runtime.State.ToString();
         StartupTrace.Write("MainWindowViewModel dependencies assigned.");
 
@@ -179,6 +189,46 @@ public partial class MainWindowViewModel : ViewModelBase, IAsyncDisposable
         var window = new LogicEditorWindow
         {
             DataContext = _logicEditorFactory()
+        };
+        window.Show();
+    }
+
+    [RelayCommand]
+    private void OpenHmiEditor()
+    {
+        if (_hmiEditorFactory is null)
+        {
+            return;
+        }
+
+        var window = new HmiEditorWindow
+        {
+            DataContext = _hmiEditorFactory(),
+            Width = 1180,
+            Height = 720,
+            MinWidth = 980,
+            MinHeight = 620,
+            WindowState = Avalonia.Controls.WindowState.Normal
+        };
+        window.Show();
+    }
+
+    [RelayCommand]
+    private void OpenHmiRuntime()
+    {
+        if (_hmiRuntimeFactory is null)
+        {
+            return;
+        }
+
+        var window = new HmiRuntimeWindow
+        {
+            DataContext = _hmiRuntimeFactory(),
+            Width = 1280,
+            Height = 760,
+            MinWidth = 900,
+            MinHeight = 560,
+            WindowState = Avalonia.Controls.WindowState.Normal
         };
         window.Show();
     }
