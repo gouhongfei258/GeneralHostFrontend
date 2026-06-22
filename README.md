@@ -334,3 +334,13 @@ Assets/                          应用图标和资源
 - HMI 模板默认保存在 `Config/hmi-resources/templates/`。
 
 更详细的架构说明见 `ARCHITECTURE.md`。
+
+## Issues
+### TODO
+1. 支持其他常见通信如can，openprotocal，同时优化设备编辑界面
+2. 节点编辑器和HMI设计器支持lua脚本
+3. 优化节点编辑器如支持更多节点类型，优化节点编辑窗体界面
+4. 优化HMI设计器，支持显示图表，实时曲线，优化数据流设计，优化设计体验
+5. 工程化HMI设计器和节点编辑器文件，引入模板功能
+### PLANNING
+1. 参照市面上开源物联网设计平台进行功能增加和优化
