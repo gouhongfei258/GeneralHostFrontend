@@ -338,9 +338,23 @@ Assets/                          应用图标和资源
 ## Issues
 ### TODO
 1. 支持其他常见通信如can，openprotocal，同时优化设备编辑界面
-2. 节点编辑器和HMI设计器支持lua脚本
+2. 节点编辑器和HMI设计器支持lua脚本，js脚本
 3. 优化节点编辑器如支持更多节点类型，优化节点编辑窗体界面
 4. 优化HMI设计器，支持显示图表，实时曲线，优化数据流设计，优化设计体验
 5. 工程化HMI设计器和节点编辑器文件，引入模板功能
+6. 改HMI设计器为axaml模版生成，暂时不考虑图形托拉拽编辑
 ### PLANNING
 1. 参照市面上开源物联网设计平台进行功能增加和优化
+
+## 仙人指路[不用谢]
+### 参考开源[github上都能找到]
+1.[qt]hmifuncdesign
+2.[winform]stnode
+3.[avalonia]nodifyM,nodify-avalonia
+4.[wpf]nodify
+4.[PlcCommunications]hslcommunications
+5.[c#]natasha
+### 思路提供
+1.b站搜索关键字：节点编辑器，通用上位机，可视化编程
+## 有意向参与贡献此项目的可以联系我
+1.if you want to take part in this project, please contact me.
